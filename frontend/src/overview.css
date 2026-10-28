@@ -1,0 +1,32 @@
+/* Suggestions first; supporting context stays below the analyst's cards. */
+.app header{height:58px;padding:0 32px;gap:16px}
+.workspace-title{min-width:0}
+.workspace-title h1{font-size:19px;letter-spacing:-.4px;white-space:nowrap}
+.workspace-title h1 span{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:#8293a3;margin-left:6px}
+.workspace-title>strong{font-size:15px;font-weight:600}
+.app .header-right{gap:16px}
+.workspace-status{display:flex;align-items:center;gap:6px;font-size:10px;color:#7c8f9b;white-space:nowrap}
+.status-dot{width:5px;height:5px;border-radius:50%;background:#67a08b}
+.status-error{color:#b26553}
+.status-error .status-dot{background:#b26553}
+.status-spinner{animation:spin 2s linear infinite}
+.processing-line{font-size:11px;color:#788c9e;line-height:1.6;margin:0 0 12px}
+.overview main{padding:18px 32px 20px;max-width:1500px}
+.overview .desk-layout{display:block}
+.overview .suggestions{width:100%}
+.overview .suggestion{padding:16px 18px;gap:12px;margin-bottom:10px;animation:none}
+.overview .suggestion h3{font-size:15px;margin:5px 0 6px}
+.overview .suggestion p{font-size:12px;line-height:1.6;color:#718496}
+.overview .card-footer{margin-top:10px}
+.overview .advisory-note{margin:13px 0 20px}
+.overview .liquidity-section{margin:0 0 14px}
+.review-notice{font-size:11px;color:#9c8551;line-height:1.7;margin-bottom:12px}
+.review-notice summary{cursor:pointer}
+.review-notice ul{padding-left:18px;margin:8px 0}
+.snapshot-summary{font-size:11px;line-height:1.8;color:#8193a3;border-top:1px solid #e5eaee;padding:12px 0}
+.snapshot-summary summary{cursor:pointer;color:#5d7b96}
+.snapshot-summary p{max-width:900px}
+.overview footer{margin-top:12px;padding:12px 0}
+@media(max-width:900px){.app header{padding:0 22px}.overview main{padding:16px 22px}.workspace-status{font-size:9px}}
+@media(max-width:600px){.app header{height:auto;min-height:54px;padding:10px 14px;flex-wrap:wrap;gap:8px}.workspace-title h1{font-size:17px}.app .header-right{gap:8px}.workspace-status>span:last-child{display:none}.app .demo-badge{display:none}.overview main{padding:12px 12px 18px}.overview .suggestion{padding:13px 12px;gap:9px}.overview .suggestion h3{font-size:14px}.overview .suggestion p{font-size:11px}.overview .card-footer span{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.status-spinner{animation:none}}

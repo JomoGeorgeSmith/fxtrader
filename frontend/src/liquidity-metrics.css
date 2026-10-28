@@ -1,0 +1,39 @@
+.liquidity-section{margin:-15px 0 22px}
+.liquidity-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px}
+.liquidity-heading>span:last-child{font-size:9px;color:#9ca7b1}
+.liquidity-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.liquidity-card{background:white;border:1px solid #e3e9ee;border-radius:8px;min-width:0}
+.metric-summary{display:flex;align-items:center;gap:12px;min-height:58px;padding:10px 15px;cursor:pointer;list-style:none}
+.metric-summary::-webkit-details-marker{display:none}
+.metric-summary:focus-visible{outline:2px solid #45627d;outline-offset:3px;border-radius:8px}
+.metric-identity{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.metric-identity strong,.metric-heading strong{font-family:Manrope,sans-serif;font-size:12px;color:#3b5873;letter-spacing:.5px}
+.metric-name{font-size:9px;color:#8c9aa7}
+.metric-value{font-family:Manrope,sans-serif;font-size:22px;font-weight:650;letter-spacing:-.6px;white-space:nowrap}
+.metric-value>span{font-size:13px;color:#8496a5;margin-left:2px;font-weight:400}
+.metric-status{font-size:9px;padding:4px 6px;border-radius:4px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.metric-status.good{color:#5e8a7a;background:#edf6f1}
+.metric-status.normal{color:#a48b4e;background:#fcf6e8}
+.metric-status.at-risk{color:#b96d5d;background:#fcf0ed}
+.metric-chevron{color:#8296a7;flex-shrink:0;transition:transform .15s}
+.liquidity-card[open] .metric-chevron{transform:rotate(180deg)}
+.metric-details{margin:0 15px;padding:12px 0 4px;border-top:1px solid #edf1f4;font-size:10px;color:#8195a5;line-height:1.8}
+.metric-details h4{font-size:11px;font-weight:500;color:#5d7b96;margin:14px 0 0}
+.metric-details p{font-size:11px;line-height:1.8}
+.metric-tag{font-size:9px;color:#8296a7;display:flex;align-items:center;gap:5px;margin-bottom:14px}
+.metric-gauge{height:5px;border-radius:5px;position:relative;margin:0 4px}
+.metric-gauge i{position:absolute;width:9px;height:9px;border:2px solid white;border-radius:50%;background:#45627d;top:-2px;transform:translateX(-50%);box-shadow:0 0 0 1px #8095a7;transition:left .5s}
+.metric-bands{display:flex;justify-content:space-between;font-size:8px;color:#96a3ad;margin:9px 0 0;gap:6px}
+.metric-equation{background:#f4f7fa;padding:10px;border-radius:5px;font-size:11px;color:#58738a;overflow-wrap:anywhere}
+.metric-details ul{padding:0;list-style:none}
+.metric-details li{padding:10px 0;border-bottom:1px solid #edf1f4;display:flex;flex-wrap:wrap;gap:5px;justify-content:space-between}
+.metric-details li strong{text-transform:capitalize;font-weight:500;color:#6a8195}
+.metric-details li small{display:block;width:100%;font-size:9px;overflow-wrap:anywhere}
+.metric-caveat{font-size:9px;color:#9ba8b3;line-height:1.6;margin:7px 0 0}
+.metric-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.liquidity-card:has(.skeleton){padding:10px 15px;min-height:58px}
+.liquidity-card>.skeleton{display:none}
+.metric-description{font-size:10px;color:#9ba8b3;margin:5px 0 0}
+@media(max-width:1100px){.metric-name{display:none}.metric-summary{gap:8px;padding:10px 12px}}
+@media(max-width:600px){.liquidity-section{margin-top:-10px}.liquidity-cards{grid-template-columns:1fr;gap:7px}.liquidity-heading>span:last-child{display:none}.metric-summary{min-height:52px}.metric-name{display:inline}.metric-bands{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.metric-chevron,.metric-gauge i{transition:none}}

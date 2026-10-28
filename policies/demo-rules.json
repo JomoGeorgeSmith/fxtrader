@@ -1,0 +1,15 @@
+{
+  "version": "demo-1.2",
+  "label": "Demo rules — not official JN or BOJ requirements",
+  "minimum_available": {"JMD": 150000000, "USD": 1000000, "GBP": 150000, "CAD": 200000},
+  "protected_reserve": {"JMD": 200000000, "USD": 500000, "GBP": 50000, "CAD": 75000},
+  "max_absolute_fx_exposure_pct": 15,
+  "rate_max_age_hours": 24,
+  "unusual_rate_move_pct": 2,
+  "forecast_days": 28,
+  "max_suggestions": 5,
+  "liquidity_metrics": {
+    "lcr": {"normal_min_pct": 100, "good_min_pct": 120, "inflow_cap_pct": 75},
+    "nsfr": {"normal_min_pct": 100, "good_min_pct": 120}
+  }
+}

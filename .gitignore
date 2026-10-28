@@ -1,0 +1,16 @@
+apikey.txt
+.env
+.env.*
+!.env.example
+.venv/
+node_modules/
+frontend/dist/
+runtime/
+shared/*.xlsx
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+*.log
+# Local reference documents, not application source code.
+/JN Bank Investment Policy Updated  Mar 2024.pdf
+/daily liquidity sheet sample.jpg
