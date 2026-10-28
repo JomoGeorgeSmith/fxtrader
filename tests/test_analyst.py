@@ -6,10 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.analyst import build_evidence, validate_output, generate_suggestions, simulate_conversion
+from backend.analyst import build_evidence, validate_output, generate_suggestions, simulate_conversion, EvidenceReview, attach_review_warnings
 from backend.app import read_context, ask_model
 from backend.calculations import evaluate
 from backend.seed import seed, ROOT
+from backend.model_context import compact
 
 class AnalystTests(unittest.TestCase):
     @classmethod
@@ -34,12 +35,39 @@ class AnalystTests(unittest.TestCase):
             detail='The forecast falls below the operating buffer. Confirm receipts and review approved funding; protected reserves must remain untouched.',
             assumptions=['Receipt timing remains uncertain.'],finding_ids=['liquidity-USD'],fact_ids=['USD.buffer_gap','USD.first_breach'],rule_ids=['minimum_available'])])
 
+    def setUp(self):
+        # These tests isolate card writing/review. The real LangGraph routing
+        # and forced financial-tool execution are exercised in test_orchestrator.
+        route=patch('backend.analyst.run_orchestrator',side_effect=lambda **kw:kw['write'](dict(plan=None,funding_tasks=[],assessments=[],warnings=[])))
+        route.start()
+        self.addCleanup(route.stop)
+
     def test_valid_model_authored_output_retains_its_wording(self):
         body=self.response()
         brief,cards=validate_output(json.dumps(body),self.catalog,self.result,self.rules)
         self.assertEqual(cards[0]['summary'],body['suggestions'][0]['summary'])
         self.assertEqual(cards[0]['author'],'fx-analyst')
         self.assertTrue(cards[0]['sources'])
+
+    def test_friendly_voice_uses_existing_writer_without_an_extra_rewrite(self):
+        body=self.response()
+        body['suggestions'][0]['title']="Let's get ahead of the cash gap"
+        body['suggestions'][0]['summary']="Our US dollar cash could fall below its safety cushion. Let's confirm the expected deposits before relying on them."
+        calls=[]
+        def model(prompt,content,tools=None,**kwargs):
+            title=kwargs['response_schema']['title'];calls.append(title)
+            if title=='AnalystOutput':
+                self.assertIn('Writing voice: a helpful colleague',prompt)
+                self.assertIn('two or three short everyday sentences',prompt)
+                self.assertIn('Keep the real risks and conditions clear.',prompt)
+                self.assertNotIn('Keep summaries to one short sentence',prompt)
+                return json.dumps(body)
+            return json.dumps(dict(valid=True,errors=[]))
+        output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Python validation',None)
+        self.assertEqual(calls,['AnalystOutput','EvidenceReview'])
+        self.assertEqual(output['suggestions'][0]['summary'],body['suggestions'][0]['summary'])
+        self.assertEqual(output['suggestions'][0]['severity'],'critical')
+        self.assertEqual(output['analyst_audit']['validation_attempts'],[])
 
     def test_numbers_are_not_matched_against_catalog(self):
         body=self.response()
@@ -124,7 +152,8 @@ class AnalystTests(unittest.TestCase):
                 self.assertNotIn('enum',topic_schema)
             self.assertEqual(schema,'AnalystOutput')
             self.assertNotIn('CURRENT STAGE:',prompt)
-            self.assertIn('read_treasury_context',kwargs['required_tools'])
+            self.assertEqual(kwargs['required_tools'],set())
+            self.assertEqual(json.loads(content)['workbooks'],compact(self.data))
             self.assertIn('assess_funding_plan',kwargs['tool_handlers'])
             self.assertNotIn('assess_funding_plan',kwargs['required_tools'])
             self.assertEqual(tools['read_treasury_context'][1],self.data)
@@ -172,18 +201,19 @@ class AnalystTests(unittest.TestCase):
         self.assertEqual(output['suggestions'],[])
         self.assertEqual(output['suggestion_origin'],'unavailable')
 
-    def test_invalid_output_can_be_retried_without_rewriting(self):
-        responses=iter(['{}',json.dumps(self.response())])
+    def test_invalid_output_is_reported_once_without_a_paid_rewrite(self):
+        calls=[]
         def model(*args,**kwargs):
             schema=kwargs.get('response_schema',{}).get('title')
-            if schema=='EvidenceReview':return json.dumps({'valid':True,'errors':[]})
-            if schema=='AnalystOutput':return next(responses)
-            return 'Investigation record.'
+            calls.append(schema)
+            return '{}'
         output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
-        self.assertEqual(output['suggestion_origin'],'analyst')
+        self.assertEqual(output['suggestion_origin'],'unavailable')
+        self.assertEqual(calls,['AnalystOutput'])
         self.assertEqual(len(output['analyst_audit']['validation_attempts']),1)
+        self.assertFalse(output['analyst_audit']['automatic_rewrites'])
 
-    def test_single_stage_generation_then_factual_review(self):
+    def test_writer_receives_routed_research_then_nonblocking_review(self):
         calls=[]
         def model(prompt,content,tools=None,**kwargs):
             schema=kwargs['response_schema']['title']
@@ -198,13 +228,13 @@ class AnalystTests(unittest.TestCase):
         self.assertEqual(output['suggestion_origin'],'analyst')
         self.assertEqual(calls,['AnalystOutput','EvidenceReview'])
         self.assertNotIn('investigation',output['analyst_audit'])
-        self.assertNotIn('workflow_version',output['analyst_audit'])
+        self.assertEqual(output['analyst_audit']['workflow_version'],'compact-routing-2')
 
     def test_independent_review_concerns_warn_without_suppressing_advice(self):
         def wrong(*args,**kwargs):
             schema=kwargs.get('response_schema',{}).get('title')
             if schema=='AnalystOutput':return json.dumps(self.response())
-            if schema=='EvidenceReview':return json.dumps({'valid':False,'errors':['Reserve balance has been confused with reserve shortfall.']})
+            if schema=='EvidenceReview':return json.dumps({'valid':False,'errors':[dict(message='Reserve balance has been confused with reserve shortfall.',suggestion_ids=['funding-USD'],affects_overview=False)]})
             return 'Investigation record.'
         output=generate_suggestions(wrong,self.prompt,self.data,self.result,self.rules,'Validated',None)
         self.assertEqual(output['suggestions'][0]['summary'],self.response()['suggestions'][0]['summary'])
@@ -212,6 +242,31 @@ class AnalystTests(unittest.TestCase):
         self.assertTrue(any('Reserve balance' in w for w in output['validation_warnings']))
         self.assertFalse(output['analyst_audit']['evidence_review']['valid'])
         self.assertEqual(output['analyst_audit']['validation_attempts'],[])
+        self.assertEqual(output['suggestions'][0]['review_warnings'],output['validation_warnings'])
+        self.assertEqual(output['analysis_review_warnings'],[])
+
+    def test_review_warnings_attach_only_to_explicitly_referenced_cards(self):
+        cards=[dict(id=id) for id in ('funding-USD','exposure-portfolio','liquidity-portfolio','rate-GBP')]
+        review=EvidenceReview.model_validate(dict(valid=False,errors=[
+            dict(message='The conversion exceeds the demo exposure cap.',suggestion_ids=['funding-USD','exposure-portfolio'],affects_overview=False),
+            dict(message='Ratios do not resolve a currency shortage.',suggestion_ids=['liquidity-portfolio'],affects_overview=True),
+            dict(message='The overview overstates the tested solution.',suggestion_ids=[],affects_overview=True)]))
+        all_warnings,overview=attach_review_warnings(cards,review,['Planning unavailable.'])
+        self.assertEqual(len(all_warnings),4)
+        self.assertEqual(cards[0]['review_warnings'],cards[1]['review_warnings'])
+        self.assertEqual(len(cards[2]['review_warnings']),1)
+        self.assertEqual(cards[3]['review_warnings'],[])
+        self.assertEqual(len(overview),3)
+        self.assertNotIn('Factual review: The conversion exceeds the demo exposure cap.',overview)
+
+    def test_unknown_warning_reference_is_retained_without_a_publishing_gate(self):
+        cards=[dict(id='funding-USD')]
+        review=EvidenceReview.model_validate(dict(valid=False,errors=[
+            dict(message='The claim needs review.',suggestion_ids=['unknown-card'],affects_overview=False)]))
+        all_warnings,overview=attach_review_warnings(cards,review,[])
+        self.assertEqual(all_warnings,overview)
+        self.assertEqual(len(overview),1)
+        self.assertEqual(cards[0]['review_warnings'],[])
 
     def test_review_outage_or_invalid_review_does_not_hide_authored_cards(self):
         for failure in ('invalid json',RuntimeError('private provider body')):
@@ -223,6 +278,8 @@ class AnalystTests(unittest.TestCase):
                 output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
             self.assertEqual(output['suggestion_origin'],'analyst')
             self.assertTrue(any('review unavailable' in w for w in output['validation_warnings']))
+            self.assertEqual(output['analysis_review_warnings'],output['validation_warnings'])
+            self.assertEqual(output['suggestions'][0]['review_warnings'],[])
             self.assertNotIn('private provider body',json.dumps(output))
 
     def test_conversion_uses_buy_sell_rates_and_never_mutates_snapshot(self):

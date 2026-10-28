@@ -17,7 +17,9 @@
 .overview .suggestion{padding:16px 18px;gap:12px;margin-bottom:10px;animation:none}
 .overview .suggestion h3{font-size:15px;margin:5px 0 6px}
 .overview .suggestion p{font-size:12px;line-height:1.6;color:#718496}
-.overview .card-footer{margin-top:10px}
+.overview .card-footer{margin-top:10px;justify-content:flex-end}
+.run-analyst{display:flex;align-items:center;gap:6px;border:1px solid #d8e3ed;border-radius:5px;padding:7px 9px;background:white;color:#28577d;font-size:11px;white-space:nowrap}
+.run-analyst:disabled{opacity:.5;cursor:default}
 .overview .advisory-note{margin:13px 0 20px}
 .overview .liquidity-section{margin:0 0 14px}
 .review-notice{font-size:11px;color:#9c8551;line-height:1.7;margin-bottom:12px}
