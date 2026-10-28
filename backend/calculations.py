@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 from .liquidity_metrics import calculate_metrics
+from .fx_market import ledger_events
 
 CURRENCIES = ('JMD','USD','GBP','CAD')
 def dec(value):
@@ -13,6 +14,7 @@ def evaluate(data, rules, now=None):
     now = now or datetime.now()
     findings, positions, forecast = [], [], []
     rates = {r['currency']: r for r in data['rates']}
+    booked_events=ledger_events(data)
     def add(id, severity, title, summary, detail, rule, sources, currency=None):
         findings.append(dict(id=id,severity=severity,title=title,summary=summary,detail=detail,rule=rule,sources=sources,currency=currency))
     for currency in CURRENCIES:
@@ -32,8 +34,9 @@ def evaluate(data, rules, now=None):
             def flows(kind):
                 return [r for r in data[kind] if r['currency']==currency and r['value_date']==date and r['status'] not in ('Cancelled','Settled')]
             ins, outs = flows('receipts'), flows('payments')
-            running += sum((dec(r['amount']) for r in ins),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))
-            cautious_running += sum((dec(r['amount']) for r in ins if r['status'] in ('Confirmed','Committed')),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))
+            booked=sum((amount for when,c,amount in booked_events if when==date and c==currency),Decimal(0))
+            running += sum((dec(r['amount']) for r in ins),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))+booked
+            cautious_running += sum((dec(r['amount']) for r in ins if r['status'] in ('Confirmed','Committed')),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))+booked
             cautious_low = min(cautious_low,cautious_running)
             forecast.append(dict(currency=currency,date=date,balance=float(running),confirmed_receipts_balance=float(cautious_running)))
             if running < floor and first_breach is None:

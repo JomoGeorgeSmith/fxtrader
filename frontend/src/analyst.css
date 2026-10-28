@@ -5,3 +5,13 @@
 .insight-review ul{padding-left:18px;margin:0}
 .insight-review li+li{margin-top:8px}
 .snapshot-review{margin:14px 0}
+.recommended-action,.action-result{border-top:1px solid #e5eaee;margin-top:13px;padding-top:12px;text-align:left}
+.action-heading{display:block;color:#33536b;font-size:11px;font-weight:600;margin-bottom:7px}
+.recommended-action dl{margin:0;font-size:12px;line-height:1.6}
+.action-row{display:grid;grid-template-columns:145px minmax(0,1fr);gap:12px;margin:4px 0}
+.action-row dt{color:#718496;font-weight:400}
+.action-row dd{margin:0;color:#33536b;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.action-result p{margin:0}
+.overview .suggestion .action-timing,.drawer .action-timing{font-size:10px;line-height:1.5;margin:7px 0 0;color:#718496}
+.recommended-action~.card-footer{border-top:1px solid #e5eaee;padding-top:10px}
+@media(max-width:600px){.action-row{grid-template-columns:100px minmax(0,1fr);gap:8px;font-size:11px}.action-heading{font-size:10px}}

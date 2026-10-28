@@ -75,6 +75,73 @@ class AnalystTests(unittest.TestCase):
         _,cards=validate_output(json.dumps(body),self.catalog,self.result,self.rules)
         self.assertEqual(cards[0]['summary'],body['suggestions'][0]['summary'])
 
+    def test_decision_value_guidance_reaches_existing_writer_without_a_new_gate(self):
+        calls=[]
+        def model(prompt,content,tools=None,**kwargs):
+            title=kwargs['response_schema']['title'];calls.append(title)
+            if title=='AnalystOutput':
+                self.assertIn('Decision value: an opportunity is not a status update',prompt)
+                self.assertIn('what to do, with how much, by when, and what benefit it provides',prompt)
+                self.assertIn('Put routine status observations in the snapshot brief',prompt)
+                self.assertIn('Important risk warnings can still be cards without a feasible trade.',prompt)
+                self.assertIn('not an extra review stage, completeness gate or automatic rewrite',prompt)
+                self.assertIn('Treasury reference rate',prompt)
+                self.assertIn('Writing voice: a helpful colleague',prompt)
+                return json.dumps(self.response())
+            return json.dumps(dict(valid=True,errors=[]))
+        output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
+        self.assertEqual(calls,['AnalystOutput','EvidenceReview'])
+        self.assertEqual(output['suggestion_origin'],'analyst')
+        self.assertEqual(output['suggestions'][0]['severity'],'critical')
+        self.assertIsNone(output['suggestions'][0]['recommended_action'])
+        self.assertFalse(output['analyst_audit']['automatic_rewrites'])
+
+    def test_selected_action_reaches_card_and_existing_review_without_extra_call(self):
+        body=self.response()
+        data=copy.deepcopy(self.data)
+        next(a for a in data['accounts'] if a['currency']=='GBP')['balance']=1000000000
+        rules=copy.deepcopy(self.rules);rules['max_absolute_fx_exposure_pct']=100000
+        result=evaluate(data,rules,datetime.fromisoformat(data['accounts'][0]['as_of']))
+        calls=[]
+        def model(prompt,content,tools=None,**kwargs):
+            title=kwargs['response_schema']['title'];calls.append(title)
+            if title=='AnalystOutput':
+                plan=kwargs['tool_handlers']['assess_funding_plan']['handler'](source='GBP',obligation_id='PAY-002',
+                    target_amount=1300000,settlement_date=self.catalog['analysis.forecast_start']['value'])
+                self.assertTrue(plan['scenarios']['baseline']['passes_modeled_checks'])
+                kwargs['trace'].append(dict(name='assess_funding_plan',result=plan))
+                body['suggestions'][0].update(action_id=plan['plan_id'],expected_result='This could cover the dollar gap if the expected deposits arrive.')
+                return json.dumps(body)
+            payload=json.loads(content)
+            action=payload['proposed']['suggestions'][0]['recommended_action']
+            self.assertEqual(action['buy']['amount'],'1300000.00')
+            self.assertTrue(set(action['fact_ids'])<=payload['catalog'].keys())
+            self.assertIn('expected deposits',payload['proposed']['suggestions'][0]['expected_result'])
+            return json.dumps(dict(valid=True,errors=[]))
+        output=generate_suggestions(model,self.prompt,data,result,rules,'Validated',None)
+        self.assertEqual(calls,['AnalystOutput','EvidenceReview'])
+        self.assertIsNotNone(output['suggestions'][0]['recommended_action'])
+        self.assertEqual(output['suggestions'][0]['severity'],'critical')
+        self.assertEqual(output['validation_warnings'],[])
+
+    def test_unknown_or_broken_action_keeps_other_suggestions_and_scopes_warning(self):
+        for selected in ('unknown','broken'):
+            body=self.response()
+            body['suggestions'][0].update(action_id=selected,expected_result='This would cover the dollar gap.')
+            def model(prompt,content,tools=None,**kwargs):
+                if kwargs['response_schema']['title']=='AnalystOutput':
+                    if selected=='broken':kwargs['trace'].append(dict(name='assess_funding_plan',result=dict(plan_id='broken')))
+                    return json.dumps(body)
+                return json.dumps(dict(valid=True,errors=[]))
+            with self.subTest(selected=selected):
+                output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
+                card=output['suggestions'][0]
+                self.assertIsNone(card['recommended_action'])
+                self.assertIsNone(card['expected_result'])
+                self.assertTrue(card['review_warnings'])
+                self.assertEqual(output['analysis_review_warnings'],[])
+                self.assertEqual(output['suggestion_origin'],'analyst')
+
     def test_numeric_text_does_not_auto_attach_citations(self):
         body=self.response()
         body['suggestions'][0]['fact_ids'].remove('USD.first_breach')
@@ -128,6 +195,25 @@ class AnalystTests(unittest.TestCase):
             body['suggestions'][0][field]=value
             with self.assertRaises(ValueError):
                 validate_output(json.dumps(body),self.catalog,self.result,self.rules)
+
+    def test_unknown_fact_ids_recorded_without_publishing_or_retrying(self):
+        body=self.response()
+        body['suggestions'][0]['fact_ids']=['USD.buffer_gap','invented.fact','also.invented']
+        with self.assertRaisesRegex(ValueError,r'Unknown fact reference: also\.invented, invented\.fact'):
+            validate_output(json.dumps(body),self.catalog,self.result,self.rules)
+        calls=[]
+        def model(prompt,content,tools=None,**kwargs):
+            calls.append(kwargs['response_schema']['title'])
+            payload=json.loads(content)
+            self.assertEqual(payload['citation_fact_ids'],sorted(payload['evidence_catalog']))
+            self.assertIn('Copy citation IDs verbatim',prompt)
+            return json.dumps(body)
+        output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
+        self.assertEqual(calls,['AnalystOutput'])
+        self.assertEqual(output['suggestion_origin'],'unavailable')
+        self.assertEqual(output['suggestions'],[])
+        self.assertEqual(output['analyst_audit']['validation_attempts'][0]['error'],
+                         'Unknown fact reference: also.invented, invented.fact')
 
     def test_critical_omission_or_downgrade_rejected(self):
         for mode in ('omit','downgrade'):
@@ -228,7 +314,7 @@ class AnalystTests(unittest.TestCase):
         self.assertEqual(output['suggestion_origin'],'analyst')
         self.assertEqual(calls,['AnalystOutput','EvidenceReview'])
         self.assertNotIn('investigation',output['analyst_audit'])
-        self.assertEqual(output['analyst_audit']['workflow_version'],'compact-routing-2')
+        self.assertEqual(output['analyst_audit']['workflow_version'],'compact-routing-3')
 
     def test_independent_review_concerns_warn_without_suppressing_advice(self):
         def wrong(*args,**kwargs):

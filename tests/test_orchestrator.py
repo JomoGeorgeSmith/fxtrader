@@ -49,6 +49,7 @@ class OrchestratorTests(unittest.TestCase):
         task=payload['funding_task']
         name=task['required_tool']
         self.assertEqual(kwargs['required_tools'],{name})
+        self.assertTrue(kwargs['stop_after_required_tools'])
         self.assertTrue(kwargs['model'])
         args=dict(source='CAD',target=task['currency'],amount=1000) if name=='simulate_fx_conversion' else dict(
             source='CAD',obligation_id=task['eligible_obligation_ids'][0],
@@ -78,6 +79,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(state['assessments'][0]['status'],'assessed')
         self.assertEqual(calls,[None])
         self.assertEqual(state['warnings'],[])
+        self.assertNotIn('memo',state['assessments'][0])
 
     def test_failed_worker_does_not_block_publish(self):
         def ask(*args,**kwargs):

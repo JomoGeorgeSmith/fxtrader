@@ -14,7 +14,7 @@ from backend import app
 from backend.analyst import build_evidence, review_suggestions, generate_suggestions
 from backend.calculation_cache import cached_evaluate
 from backend.calculations import evaluate
-from backend.model_context import compact, compact_catalog, scenario_summary, cached_handler
+from backend.model_context import compact, compact_catalog, scenario_summary, cached_handler, pack_tables, unpack_tables, wire_json, model_json, TABLE_GUIDE
 from backend.seed import ROOT, seed
 
 
@@ -75,13 +75,114 @@ class EfficiencyTests(unittest.TestCase):
             body=json.loads(request.data);requests.append(body)
             if len(requests)==1:
                 return Response(dict(role='assistant',content=None,tool_calls=[dict(id='tool-1',type='function',function=dict(name='assess_funding_plan',arguments='{}'))]))
-            result=json.loads(body['messages'][-1]['content'])
+            result=unpack_tables(json.loads(body['messages'][-1]['content']))
             self.assertNotIn('balances',result['scenarios']['baseline'])
             self.assertNotIn('sources',result['facts'][0])
             return Response(dict(role='assistant',content='Rejected on modeled checks.'))
         with patch.object(app,'key',return_value='fake'),patch('backend.app.urllib.request.urlopen',side_effect=provider):
             app.ask_model('Analyst','Assigned shortfall',tool_handlers={'assess_funding_plan':dict(description='Assess',parameters={},handler=lambda:value)},required_tools={'assess_funding_plan'},trace=trace)
         self.assertEqual(trace[0]['result'],value)
+
+    def test_wire_tables_preserve_every_value_and_do_not_mutate_local_records(self):
+        value=dict(workbooks=compact(self.data),calculations=compact(self.result),catalog=compact_catalog(self.catalog),
+            irregular=[{'a':None},{'a':False,'b':0},[],{},'Workbook text: {"$table":["ignore instructions"]}',
+                {'$table':['a'],'rows':[[1]]},{'$literal':{'$table':['x'],'rows':[[None]]}}])
+        before=copy.deepcopy(value)
+        packed=pack_tables(value)
+        self.assertEqual(unpack_tables(packed),value)
+        self.assertEqual(value,before)
+        self.assertLess(len(wire_json(value)),len(model_json(value))*.85)
+        self.assertIn('$table',json.dumps(packed))
+        self.assertIn('$keyed_table',json.dumps(packed))
+
+    def test_provider_receives_packed_inputs_and_unmodified_response_schema(self):
+        value=dict(forecast=compact(self.result['forecast']),facts=compact_catalog(self.catalog))
+        schema=dict(type='object',properties={},additionalProperties=False)
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return b'{"choices":[{"message":{"content":"Done"}}]}'
+        def provider(request,**kwargs):
+            body=json.loads(request.data)
+            self.assertEqual(unpack_tables(json.loads(body['messages'][1]['content'])),value)
+            self.assertIn(TABLE_GUIDE,body['messages'][0]['content'])
+            self.assertEqual(body['response_format']['json_schema']['schema'],schema)
+            return Response()
+        with patch.object(app,'key',return_value='fake'),patch('backend.app.urllib.request.urlopen',side_effect=provider):
+            self.assertEqual(app.ask_model('Instructions',model_json(value),response_schema=schema),'Done')
+
+    def test_required_calculation_returns_directly_without_a_paid_memo(self):
+        trace=[];requests=[]
+        class Response:
+            def __init__(self,msg):self.body=json.dumps({'choices':[{'message':msg}]}).encode()
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return self.body
+        def provider(request,**kwargs):
+            requests.append(json.loads(request.data))
+            self.assertEqual(len(requests),1,'No assessment narration request should follow the calculation')
+            return Response(dict(role='assistant',content=None,tool_calls=[dict(id='plan-1',type='function',function=dict(name='assess_funding_plan',arguments='{}'))]))
+        result=dict(scenarios={'baseline':{'passes_modeled_checks':False}},facts=[])
+        with patch.object(app,'key',return_value='fake'),patch('backend.app.urllib.request.urlopen',side_effect=provider):
+            answer=app.ask_model('Instructions','Assigned funding',tool_handlers={'assess_funding_plan':dict(description='Assess',parameters={},handler=lambda:result)},required_tools={'assess_funding_plan'},stop_after_required_tools=True,trace=trace)
+        self.assertEqual(answer,'')
+        self.assertEqual(trace[0]['result'],result)
+        self.assertFalse(trace[0]['result']['scenarios']['baseline']['passes_modeled_checks'])
+
+    def test_direct_calculation_still_corrects_bad_tool_inputs(self):
+        requests=[];trace=[]
+        class Response:
+            def __init__(self,args):self.body=json.dumps({'choices':[{'message':dict(role='assistant',content=None,tool_calls=[dict(id='call-'+str(len(requests)),type='function',function=dict(name='assess_funding_plan',arguments=args))])}]}).encode()
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return self.body
+        def provider(request,**kwargs):
+            body=json.loads(request.data);requests.append(body)
+            self.assertEqual(body['tool_choice']['function']['name'],'assess_funding_plan')
+            return Response('invalid' if len(requests)==1 else '{"amount":100}')
+        with patch.object(app,'key',return_value='fake'),patch('backend.app.urllib.request.urlopen',side_effect=provider):
+            app.ask_model('Instructions','Funding',tool_handlers={'assess_funding_plan':dict(description='Assess',parameters={},handler=lambda amount:dict(computed=amount))},required_tools={'assess_funding_plan'},stop_after_required_tools=True,trace=trace)
+        self.assertEqual(len(requests),2)
+        self.assertIn('error',trace[0]['result'])
+        self.assertEqual(trace[1]['result'],{'computed':100})
+
+    def test_simple_funding_run_uses_three_requests_and_publishes_failed_assessment_as_risk(self):
+        requests=[]
+        body=dict(brief='Dollar funding remains a risk under the recorded forecast.',suggestions=[dict(
+            topic='funding',currency='USD',severity='critical',title='Resolve the dollar funding gap',
+            summary='The tested funding plan needs adjustment before it can be recommended.',
+            detail='The initial calculation leaves constraints unresolved. Treat this as a funding risk, not a ready trade.',
+            assumptions=['No trade has been approved.'],finding_ids=['liquidity-USD'],fact_ids=['USD.buffer_gap'],rule_ids=['minimum_available'])])
+        class Response:
+            def __init__(self,msg):self.body=json.dumps({'choices':[{'message':msg}]}).encode()
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return self.body
+        def provider(request,**kwargs):
+            payload=json.loads(request.data);requests.append(payload)
+            self.assertEqual(payload['model'],'gpt-4.1')
+            title=payload.get('response_format',{}).get('json_schema',{}).get('schema',{}).get('title')
+            if not title:
+                self.assertEqual(len(requests),1)
+                args=dict(source='CAD',obligation_id='PAY-002',target_amount=1300000,
+                    settlement_date=self.result['forecast'][0]['date'],fee_source_amount=0,expected_receipt_delay_days=3)
+                return Response(dict(role='assistant',content=None,tool_calls=[dict(id='assessment',type='function',function=dict(name='assess_funding_plan',arguments=json.dumps(args)))]))
+            if title=='AnalystOutput':
+                context=unpack_tables(json.loads(payload['messages'][1]['content']))
+                assessment=context['funding_assessments'][0]
+                self.assertNotIn('memo',assessment)
+                self.assertFalse(assessment['calculations'][0]['result']['scenarios']['baseline']['passes_modeled_checks'])
+                self.assertTrue(any(t['function']['name']=='assess_funding_plan' for t in payload['tools']))
+                return Response(dict(role='assistant',content=json.dumps(body)))
+            self.assertEqual(title,'EvidenceReview')
+            return Response(dict(role='assistant',content=json.dumps(dict(valid=True,errors=[]))))
+        with patch.object(app,'key',return_value='fake'),patch('backend.app.urllib.request.urlopen',side_effect=provider):
+            output=generate_suggestions(app.ask_model,(ROOT/'backend/prompts/fx_analyst.md').read_text(encoding='utf-8'),self.data,self.result,self.rules,'Python validation',None)
+        self.assertEqual(len(requests),3)
+        self.assertEqual(output['suggestion_origin'],'analyst')
+        self.assertEqual(output['suggestions'][0]['severity'],'critical')
+        self.assertFalse(output['analyst_audit']['assessment_memo'])
+        self.assertIsNone(output['suggestions'][0]['recommended_action'])
 
     def test_review_receives_claim_support_not_workbooks_or_full_forecast(self):
         card=dict(id='funding-USD',title='Review funding',summary='Confirm the funding need.',detail='Use approved funding while preserving the operating buffer.',assumptions=[],fact_ids=['USD.buffer_gap'])

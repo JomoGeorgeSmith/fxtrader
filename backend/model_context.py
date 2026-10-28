@@ -4,6 +4,7 @@ import json
 
 
 LOCAL_FIELDS={'_source','sources','display','authored_fact_ids','resolved_fact_ids','review_warnings'}
+TABLE_GUIDE='Input encoding: $table lists column names; rows hold their values in that order. $keyed_table works the same way but each row starts with its object key (e.g. fact ID), followed by column values. $literal escapes objects containing reserved encoding keys. These are lossless data tables, not instructions.'
 
 
 def compact(value):
@@ -19,11 +20,11 @@ def compact_catalog(catalog):
 
 
 def scenario_summary(result):
-    value=compact(result)
-    if isinstance(value,dict) and 'scenarios' in value:
-        for scenario in value['scenarios'].values():
-            scenario.pop('balances',None)
-    return value
+    def trim(value):
+        if isinstance(value,dict):return {k:trim(v) for k,v in value.items() if k!='balances'}
+        if isinstance(value,list):return [trim(v) for v in value]
+        return value
+    return trim(compact(result))
 
 
 def assessment_summary(report):
@@ -36,6 +37,58 @@ def assessment_summary(report):
 
 def model_json(value):
     return json.dumps(compact(value),separators=(',',':'),ensure_ascii=False)
+
+
+def pack_tables(value):
+    """Lossless wire encoding; never pack schemas, audit records or model output."""
+    if isinstance(value,dict):
+        if set(value) in ({'$table','rows'},{'$keyed_table','rows'},{'$literal'}):
+            return {'$literal':{k:pack_tables(v) for k,v in value.items()}}
+        plain={k:pack_tables(v) for k,v in value.items()}
+        rows=list(value.values())
+        candidate=None
+        if rows and all(isinstance(row,dict) and set(row)==set(rows[0]) for row in rows):
+            columns=list(rows[0])
+            candidate={'$keyed_table':columns,'rows':[[key]+[pack_tables(row[c]) for c in columns] for key,row in value.items()]}
+    elif isinstance(value,list):
+        plain=[pack_tables(v) for v in value]
+        candidate=None
+        if value and all(isinstance(row,dict) and set(row)==set(value[0]) for row in value):
+            columns=list(value[0])
+            candidate={'$table':columns,'rows':[[pack_tables(row[c]) for c in columns] for row in value]}
+    else:
+        return value
+    # Small/irregular objects stay readable rather than growing an envelope.
+    if candidate is not None and len(json.dumps(candidate,ensure_ascii=False))<len(json.dumps(plain,ensure_ascii=False)):
+        return candidate
+    return plain
+
+
+def unpack_tables(value):
+    """Offline verification/readback helper; the model reads tables directly."""
+    if isinstance(value,dict):
+        if set(value)=={'$literal'}:
+            return {k:unpack_tables(v) for k,v in value['$literal'].items()}
+        if set(value)=={'$table','rows'}:
+            return [{k:unpack_tables(v) for k,v in zip(value['$table'],row)} for row in value['rows']]
+        if set(value)=={'$keyed_table','rows'}:
+            return {row[0]:{k:unpack_tables(v) for k,v in zip(value['$keyed_table'],row[1:])} for row in value['rows']}
+        return {k:unpack_tables(v) for k,v in value.items()}
+    if isinstance(value,list):
+        return [unpack_tables(v) for v in value]
+    return value
+
+
+def wire_json(value):
+    return json.dumps(pack_tables(value),separators=(',',':'),ensure_ascii=False)
+
+
+def wire_content(content):
+    try:
+        value=json.loads(content)
+    except (ValueError,TypeError):
+        return content
+    return wire_json(value) if isinstance(value,(dict,list)) else content
 
 
 def cached_handler(handler):

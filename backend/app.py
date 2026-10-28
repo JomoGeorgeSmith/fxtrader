@@ -25,8 +25,10 @@ from .calculations import evaluate, CURRENCIES
 from .liquidity_metrics import COMPONENTS
 from .analyst import generate_suggestions, build_evidence, simulate_conversion
 from .funding_plan import funding_plan_tool
-from .model_context import compact, compact_catalog, scenario_summary, model_json, cached_handler
+from .model_context import compact, compact_catalog, scenario_summary, model_json, cached_handler, wire_content, wire_json, TABLE_GUIDE
 from .calculation_cache import cached_evaluate
+from .simulation_inputs import SIMULATION_FILE, read_simulation
+from .fx_scenarios import scenario_tools
 
 RUNTIME = ROOT/'runtime'
 RUNTIME.mkdir(exist_ok=True)
@@ -40,7 +42,7 @@ STOP = threading.Event()
 BOOT_ID = uuid.uuid4().hex
 LAST_INPUT_HASH = None
 WATCH_SIGNATURE = None
-FILES = ['Bank_Balances.xlsx','Daily_Rate_Sheet.xlsx','Weekly_Disbursements.xlsx']
+FILES = ['Bank_Balances.xlsx','Daily_Rate_Sheet.xlsx','Weekly_Disbursements.xlsx',SIMULATION_FILE]
 SHEETS = {'accounts':(FILES[0],'Accounts'),'reserves':(FILES[0],'Reserves'),'risk':(FILES[0],'Risk_Inputs'),'rates':(FILES[1],'Rates'),'payments':(FILES[2],'Payments'),'receipts':(FILES[2],'Expected_Receipts'),'liquidity_inputs':(FILES[0],'Liquidity_Inputs')}
 REQUIRED = {'accounts':['account_id','bank','currency','balance','holds','as_of'],'reserves':['reserve_id','currency','balance','as_of'],'risk':['currency','net_fx_exposure','capital_base_jmd','as_of'],'rates':['currency','buy','sell','previous_sell','as_of','quote'],'payments':['id','currency','amount','value_date','status'],'receipts':['id','currency','amount','value_date','status'],'liquidity_inputs':['component','currency','amount','as_of','description']}
 
@@ -55,7 +57,7 @@ def database():
     db.execute('CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY, run_id TEXT, suggestion_id TEXT, role TEXT, content TEXT)')
     return db
 
-def read_context(folder):
+def read_context(folder,include_simulation=True):
     data = {}
     books = {}
     try:
@@ -113,6 +115,7 @@ def read_context(folder):
             raise ValueError('Liquidity_Inputs: all amounts must be total JMD equivalent')
         if any(float(r['amount'])<=0 for r in inputs if r['component'] in ('stressed_outflows_30d','required_stable_funding')):
             raise ValueError('Liquidity_Inputs: stressed outflows and required stable funding must be positive')
+        if include_simulation:data.update(read_simulation(folder,data))
         return data
     finally:
         for book in books.values():
@@ -128,10 +131,10 @@ def key():
         value = (ROOT/'apikey.txt').read_text().strip()
     return value
 
-def ask_model(system, content, tool_values=None, *, tool_handlers=None, response_schema=None, required_tools=None, trace=None, max_tokens=1400, model=None, trace_stage=None):
+def ask_model(system, content, tool_values=None, *, tool_handlers=None, response_schema=None, required_tools=None, trace=None, max_tokens=1400, model=None, trace_stage=None, stop_after_required_tools=False):
     if not key():
         raise RuntimeError('No model key')
-    body = {'model':model or os.getenv('OPENAI_MODEL','gpt-4.1-mini'),'messages':[{'role':'system','content':system},{'role':'user','content':content}], 'max_tokens':max_tokens}
+    body = {'model':model or os.getenv('OPENAI_MODEL','gpt-4.1-mini'),'messages':[{'role':'system','content':system+'\n'+TABLE_GUIDE},{'role':'user','content':wire_content(content)}], 'max_tokens':max_tokens}
     if response_schema:
         body['response_format']={'type':'json_schema','json_schema':{'name':'treasury_analyst_output','strict':True,'schema':response_schema}}
     needed=set(required_tools or [])
@@ -174,8 +177,12 @@ def ask_model(system, content, tool_values=None, *, tool_handlers=None, response
                 value={'error':str(exc)[:200]}
             if trace is not None:
                 trace.append(dict(name=name,arguments=arguments,result=json.loads(json.dumps(value)),call_id=call['id'],stage=trace_stage))
-            visible=compact_catalog(value) if name=='get_evidence_catalog' and isinstance(value,dict) else scenario_summary(value) if name in ('assess_funding_plan','simulate_fx_conversion') else compact(value)
-            body['messages'].append({'role':'tool','tool_call_id':call['id'],'content':model_json(visible)})
+            visible=compact_catalog(value) if name=='get_evidence_catalog' and isinstance(value,dict) else scenario_summary(value) if name.startswith('assess_') or name=='simulate_fx_conversion' else compact(value)
+            body['messages'].append({'role':'tool','tool_call_id':call['id'],'content':wire_json(visible)})
+        if stop_after_required_tools and needed and needed<=called:
+            # The writer receives the full calculations and performs judgment.
+            # Do not buy another response just to narrate an unused tool memo.
+            return ''
         body['tool_choice'] = 'none' if turn>=6 else 'auto'
     raise RuntimeError('Agent tool-call budget exhausted')
 
@@ -235,7 +242,7 @@ def worker():
             STOP.wait(4)
 
 def signatures():
-    return tuple((p.name,p.stat().st_mtime_ns,p.stat().st_size) for p in [*(SHARED/f for f in FILES),RULES_PATH,PROMPT_PATH])
+    return tuple((p.name,p.stat().st_mtime_ns,p.stat().st_size) if p.exists() else (p.name,None,None) for p in [*(SHARED/f for f in FILES),RULES_PATH,PROMPT_PATH])
 
 def business_hash(data,rules):
     return digest(data)+hashlib.sha256(json.dumps(rules,sort_keys=True).encode()).hexdigest()
@@ -273,7 +280,7 @@ def queue_analysis(change,*,automatic=False,expected_signature=None):
         folder=RUNTIME/'snapshots'/run_id
         folder.mkdir(parents=True)
         for filename in FILES:
-            shutil.copy2(SHARED/filename,folder/filename)
+            if (SHARED/filename).exists():shutil.copy2(SHARED/filename,folder/filename)
         (folder/'demo-rules.json').write_text(rule_text,encoding='utf-8')
         (folder/'fx_analyst.md').write_text(prompt_text,encoding='utf-8')
         if signatures()!=signature or digest(read_context(folder))!=digest(data):
@@ -410,11 +417,13 @@ def chat(body:Chat):
             latest=STATE['analysis']
         handlers={'simulate_fx_conversion':dict(description='Compute an illustrative conversion, cash-buffer impact and exposure; no execution.',parameters={'type':'object','properties':{'source':{'type':'string','enum':list(CURRENCIES)},'target':{'type':'string','enum':list(CURRENCIES)},'amount':{'type':'number','exclusiveMinimum':0}},'required':['source','target','amount'],'additionalProperties':False},handler=lambda **args:simulate_conversion(analysis['context'],analysis,analysis['rules'],catalog,**args))}
         handlers['assess_funding_plan']=funding_plan_tool(analysis['context'],analysis,analysis['rules'],catalog)
+        handlers.update(scenario_tools(analysis['context'],analysis,analysis['rules'],catalog))
         for spec in handlers.values():
             if 'handler' in spec:spec['handler']=cached_handler(spec['handler'])
-        cited={id:catalog[id] for id in suggestion.get('fact_ids',[]) if id in catalog}
+        action_facts=(suggestion.get('recommended_action') or {}).get('fact_ids',[])
+        cited={id:catalog[id] for id in suggestion.get('fact_ids',[])+action_facts if id in catalog}
         content={'suggestion':suggestion,'facts':compact_catalog(cited),'positions':analysis.get('positions',[]),'policy':analysis['rules'],'snapshot_id':analysis['id'],'newer_snapshot_available':bool(latest and latest['id']!=analysis['id']),'history':messages,'question':body.message}
-        tools={'get_demo_policy':('Read the demo-rule version used in this suggestion.',analysis['rules']),'evaluate_treasury_limits':('Read immutable calculated positions, forecasts and findings.',{k:analysis[k] for k in ('positions','forecast','findings','exposure_pct','metrics') if k in analysis}),'get_evidence_catalog':('Read supported fact IDs, values, units and rules; provenance stays local.',catalog)}
+        tools={'read_treasury_context':('Read this suggestion’s original workbook snapshot, including simulation terms and order IDs.',analysis['context']),'get_demo_policy':('Read the demo-rule version used in this suggestion.',analysis['rules']),'evaluate_treasury_limits':('Read immutable calculated positions, forecasts and findings.',{k:analysis[k] for k in ('positions','forecast','findings','exposure_pct','metrics') if k in analysis}),'get_evidence_catalog':('Read supported fact IDs, values, units and rules; provenance stays local.',catalog)}
         answer=ask_model(prompt,model_json(content),tools,tool_handlers=handlers,required_tools=set(),max_tokens=800,model=os.getenv('FX_ANALYST_MODEL','gpt-4.1'))
         mode='Live AI'
     except Exception as exc:

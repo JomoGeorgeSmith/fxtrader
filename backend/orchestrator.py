@@ -56,13 +56,12 @@ def run_orchestrator(*,ask,prompt,data,result,rules,handoff,previous,tools,handl
                         raise ValueError('The conversion target must be the assigned funding currency')
                     return _spec['handler'](**args)
                 scoped[name]=dict(spec,handler=execute)
-            memo=None
             error=None
             try:
-                memo=ask(analyst_prompt+'\nYou are the same treasury analyst performing the assigned funding assessment, not writing dashboard cards. Choose a source currency, amount and settlement date yourself. The required calculation tool will execute before you can finish. Size destination funding against the forecast gap, not blindly against the full payment amount; consider funding by the first buffer breach rather than only the selected payment due date. Test receipt uncertainty and both currencies\' buffers. A zero-day delay is identical to baseline, not a receipt-delay stress test. If a tested plan fails a buffer or exposure check, use remaining tool turns to investigate a credible adjustment or materially different source before concluding, when the data supports one. This is bounded investigation, not an exhaustive search or publishing gate. Correct failed tool inputs rather than treating an error as an assessment. Return a short summary of actual results, rejected options and limitations. Never call a plan optimal or say an untested source is inferior; explicitly distinguish tested options from untested ones. A plan is not suitable merely because it pays one loan; distinguish baseline feasibility from robustness, risk and unestablished economics. General planning text is not a tool result.',
+                ask(analyst_prompt+'\nChoose the assigned funding scenario and call its required calculation tool; no prose memo is needed. Choose source, destination amount, earlier arrival date and a meaningful nonzero receipt-delay assumption yourself. Size against the forecast gap, not the full payment. Follow the Funding timing instructions. After a valid calculation, control moves directly to the writer, which can test alternatives or corrections before recommending. Failed tool inputs remain correctable; failed financial checks are evidence, not a suitable plan.',
                     model_json(dict(context,funding_task=task)),tools,
                     tool_handlers=scoped,required_tools={task['required_tool']},trace=local_trace,
-                    trace_stage='funding_assessment',max_tokens=650,model=model)
+                    trace_stage='funding_assessment',max_tokens=650,model=model,stop_after_required_tools=True)
             except Exception:
                 error='Funding assessment interrupted; retained tool results remain available.'
             executed=[t for t in local_trace if t['name']==task['required_tool']]
@@ -72,7 +71,7 @@ def run_orchestrator(*,ask,prompt,data,result,rules,handoff,previous,tools,handl
             status='assessed' if successful else 'failed'
             if error or not successful:
                 warnings.append(f'{currency}: '+(error or 'No funding calculation completed. No tested funding solution was established.'))
-            reports.append(dict(task=task,status=status,memo=memo,error=error,tool_calls=local_trace))
+            reports.append(dict(task=task,status=status,error=error,tool_calls=local_trace))
             trace.extend(local_trace)
         return dict(assessments=reports,warnings=warnings)
 

@@ -12,7 +12,7 @@ def cached_evaluate(data,rules,directory,now=None):
     # Day changes affect forecasts; crossing the quote-age threshold affects
     # freshness warnings even when no workbook value changes.
     freshness={r['currency']:(now-datetime.fromisoformat(r['as_of'])).total_seconds()/3600>rules['rate_max_age_hours'] for r in data['rates']}
-    code=''.join((Path(__file__).parent/name).read_text(encoding='utf-8') for name in ('calculations.py','liquidity_metrics.py','calculation_cache.py'))
+    code=''.join((Path(__file__).parent/name).read_text(encoding='utf-8') for name in ('calculations.py','liquidity_metrics.py','fx_market.py','calculation_cache.py'))
     payload=dict(data=data,rules=rules,date=now.date().isoformat(),stale=freshness,code=hashlib.sha256(code.encode()).hexdigest())
     key=hashlib.sha256(json.dumps(payload,sort_keys=True).encode()).hexdigest()
     path=Path(directory)/f'{key}.json'
