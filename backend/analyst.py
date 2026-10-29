@@ -14,6 +14,7 @@ from .orchestrator import run_orchestrator
 from .model_context import compact, compact_catalog, scenario_summary, assessment_summary, model_json, cached_handler
 from .recommended_action import recommended_action, sheet_rate
 from .fx_scenarios import scenario_tools
+from .reserve_transfer import reserve_candidates, reserve_transfer_tool
 
 class Card(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -27,8 +28,9 @@ class Card(BaseModel):
     finding_ids: list[str] = Field(max_length=20)
     fact_ids: list[str] = Field(min_length=1,max_length=35)
     rule_ids: list[str] = Field(max_length=15)
-    action_id: str | None = Field(default=None,description='Exact plan_id or scenario_id of ONE passing tested action: conversion, receipt match, cancellation or forward. Null for observations/rejected plans. Never invent an ID.')
+    action_id: str | None = Field(default=None,description='Exact plan_id or scenario_id of ONE passing tested action, including a combined allocation plan. Null for observations/rejected plans. Never invent an ID.')
     expected_result: str | None = Field(default=None,min_length=10,max_length=320,description='Brief plain-English expected outcome of the selected tested action, including material receipt dependencies. No claims of completed checks beyond tool evidence. Null when there is no selected action.')
+    next_move: str | None = Field(default=None,max_length=500,description='A concrete next decision: amount and deadline when supported, what Treasury must confirm, and a fallback if the option fails. Conditional reserve access is not an approved transfer. Use null only for a truly informational card.')
 
 class AnalystOutput(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -41,7 +43,7 @@ def analyst_schema():
     # require it explicitly (null is valid), without an unsupported default.
     card=schema['$defs']['Card']
     card['required']=list(card['properties'])
-    for name in ('action_id','expected_result'):
+    for name in ('action_id','expected_result','next_move'):
         card['properties'][name].pop('default',None)
     return schema
 
@@ -164,10 +166,11 @@ def build_evidence(data,result,rules):
             add(f'simulation.{row["id"]}',f'Synthetic {key} record; see workbook row',row['id'],'record',[row['_source']],[],row['currency'])
     return catalog
 
-def validate_output(raw,catalog,result,rules):
+def validate_output(raw,catalog,result,rules,warnings=None):
     output=AnalystOutput.model_validate_json(raw)
-    if len(output.suggestions)>min(5,int(rules['max_suggestions'])):
-        raise ValueError('Too many suggestion cards for the configured limit')
+    warnings=[] if warnings is None else warnings
+    if len(output.suggestions)>int(rules['max_suggestions']):
+        warnings.append('The analyst proposed more cards than the demo policy suggests; review their priority.')
     findings={f['id']:f for f in result['findings']}
     known_rules=rule_ids(rules)
     cards=[]
@@ -175,34 +178,40 @@ def validate_output(raw,catalog,result,rules):
     ids=set()
     for card in output.suggestions:
         if set(card.finding_ids)-findings.keys():
-            raise ValueError('Unknown finding reference')
+            warnings.append(f'Skipped {card.topic}: its finding reference is not in this run.')
+            continue
         unknown_facts=sorted(set(card.fact_ids)-catalog.keys())
         if unknown_facts:
-            raise ValueError('Unknown fact reference: '+', '.join(unknown_facts))
+            warnings.append(f'Skipped {card.topic}: unverified fact reference(s): '+', '.join(unknown_facts))
+            continue
         authored_fact_ids=list(card.fact_ids)
         facts=[catalog[id] for id in card.fact_ids]
         referenced=[findings[id] for id in card.finding_ids]
         allowed_rules={r for f in facts for r in f['rules']}|{f['rule'] for f in referenced}
         if set(card.rule_ids)-known_rules or set(card.rule_ids)-allowed_rules:
-            raise ValueError('Rule references are not supported by the cited evidence')
-        critical_refs=[f['id'] for f in referenced if f['severity']=='critical']
-        if critical_refs and card.severity!='critical':
-            raise ValueError(f'Card {card.topic} cites critical finding(s) {", ".join(critical_refs)}: set its severity to critical. A hypothetical improvement does not downgrade the current finding.')
-        for finding in referenced:
-            if card.summary==finding['summary']:
-                raise ValueError('Write an original analyst summary rather than copying a finding template')
+            warnings.append(f'Skipped {card.topic}: rule references are not supported by its evidence.')
+            continue
         if not any(f['sources'] for f in facts):
-            raise ValueError('A suggestion needs workbook-backed evidence, not policy alone')
+            warnings.append(f'Skipped {card.topic}: no workbook-backed evidence.')
+            continue
         id=f'{card.topic}-{card.currency or "portfolio"}'
         if id in ids:
-            raise ValueError('Combine duplicate topic/currency cards')
+            warnings.append(f'Skipped duplicate card {id}.')
+            continue
         ids.add(id)
+        card_warnings=[]
+        critical_refs=[f['id'] for f in referenced if f['severity']=='critical']
+        if critical_refs and card.severity!='critical':
+            card_warnings.append(f'This card is labeled {card.severity}, but it cites critical calculated finding(s) {", ".join(critical_refs)}. Review the severity before acting.')
+        for finding in referenced:
+            if card.summary==finding['summary']:
+                card_warnings.append('This summary repeats a calculated finding; review the analyst interpretation.')
         covered.update(card.finding_ids)
         sources=sorted({s for f in facts for s in f['sources']}|{s for f in referenced for s in f['sources']})
-        cards.append(dict(id=id,**card.model_dump(),rule='; '.join(card.rule_ids) or 'Evidence-based analyst judgment · no specific demo rule',sources=sources,author='fx-analyst',authored_fact_ids=authored_fact_ids,resolved_fact_ids=[]))
+        cards.append(dict(id=id,**card.model_dump(),rule='; '.join(card.rule_ids) or 'Evidence-based analyst judgment · no specific demo rule',sources=sources,author='fx-analyst',authored_fact_ids=authored_fact_ids,resolved_fact_ids=[],validation_warnings=card_warnings))
     critical={id for id,f in findings.items() if f['severity']=='critical'}
     if critical-covered:
-        raise ValueError('The analyst omitted critical findings; combine related findings if needed')
+        warnings.append('Calculated critical finding(s) not addressed by a published card: '+', '.join(sorted(critical-covered)))
     return output.brief,cards
 
 def simulate_conversion(data,result,rules,catalog,source,target,amount):
@@ -247,8 +256,30 @@ def simulate_conversion(data,result,rules,catalog,source,target,amount):
                 exposure_within_demo_limit=pct<=Decimal(str(rules['max_absolute_fx_exposure_pct'])),source_buffer_preserved_without_expected_receipts=source_after.get('confirmed_receipts_low',source_after['projected_low'])>=source_after['minimum'],facts=facts,
                 assumptions='Immediate hypothetical settlement at bank-perspective sheet buy/sell rates, before fees. Receipts and payments unchanged. Reserves excluded. No transaction is executed. Independent LCR/NSFR aggregates are not recalculated.')
 
+def material_liquidity_changes(result,previous):
+    """Surface large cash-gap changes as context, not a synthetic publication gate."""
+    if not previous or not previous.get('positions'):
+        return []
+    earlier={p['currency']:p for p in previous['positions']}
+    changes=[]
+    for p in result['positions']:
+        prior=earlier.get(p['currency'])
+        if not prior:
+            continue
+        gap=max(0,p['minimum']-p['projected_low'])
+        old_gap=max(0,prior['minimum']-prior['projected_low'])
+        if gap<=old_gap or gap-old_gap<max(1,p['minimum']*.1):
+            continue
+        first=next((row['date'] for row in result['forecast'] if row['currency']==p['currency'] and row['balance']<p['minimum']),None)
+        changes.append(dict(currency=p['currency'],previous_gap=old_gap,current_gap=gap,increase=gap-old_gap,
+            available_after_holds=p['available'],projected_low=p['projected_low'],first_breach=first,
+            note='Calculation-backed change; explain urgency and uncertainty. Not an approved trade.'))
+    return sorted(changes,key=lambda item:(item['first_breach'] or '9999',-item['increase']))
+
 def generate_suggestions(ask,prompt,data,result,rules,handoff,previous,progress=None):
     catalog=build_evidence(data,result,rules)
+    conditional_reserve_options=reserve_candidates(data,result,rules)
+    liquidity_changes=material_liquidity_changes(result,previous)
     previous_summary=None if not previous else dict(id=previous.get('id'),created=previous.get('created'),positions=previous.get('positions'),suggestions=[{k:s.get(k) for k in ('id','topic','currency','title','summary')} for s in previous.get('suggestions',[])])
     if previous_summary and previous.get('suggestion_origin')!='analyst':
         previous_summary['suggestions']=[]
@@ -265,6 +296,7 @@ def generate_suggestions(ask,prompt,data,result,rules,handoff,previous,progress=
     }
     handlers={'simulate_fx_conversion':dict(description='Calculate an immediate hypothetical currency conversion using sheet buy/sell rates; check source cash buffers and exposure. Does not execute anything.',parameters={'type':'object','properties':{'source':{'type':'string','enum':list(CURRENCIES)},'target':{'type':'string','enum':list(CURRENCIES)},'amount':{'type':'number','exclusiveMinimum':0}},'required':['source','target','amount'],'additionalProperties':False},handler=lambda **args:simulate_conversion(data,result,rules,catalog,**args))}
     handlers['assess_funding_plan']=funding_plan_tool(data,result,rules,catalog)
+    handlers['assess_reserve_transfer']=reserve_transfer_tool(data,result,rules,catalog)
     handlers.update(scenario_tools(data,result,rules,catalog))
     for spec in handlers.values():
         spec['handler']=cached_handler(spec['handler'])
@@ -280,13 +312,18 @@ def generate_suggestions(ask,prompt,data,result,rules,handoff,previous,progress=
                 value['evidence_review']=review
             return value
         payload=dict(handoff=handoff,workbooks=data,calculations=tool_result,policy=rules,
-            evidence_catalog=compact_catalog(catalog),citation_fact_ids=sorted(catalog),previous_snapshot=previous_summary,
+            evidence_catalog=compact_catalog(catalog),previous_snapshot=previous_summary,
+            material_liquidity_changes=liquidity_changes,
+            conditional_reserve_options=conditional_reserve_options,
             funding_tasks=workflow.get('funding_tasks',[]),funding_assessments=[assessment_summary(r) for r in workflow.get('assessments',[])],
             task='Investigate and write the final cards under the output contract. Initial funding calculations are evidence, not pre-approved recommendations. Use tools for worthwhile alternatives, failed-plan adjustments, earlier arrival dates or nonzero receipt-delay tests as needed; then explain the tested decision, benefits and limitations. No assessment memo or card rewrite follows.')
         writer_prompt=prompt+'\nThe full baseline and initial tool results are supplied. This is the combined assessment-interpretation and card-writing stage; use calculation tools for further investigation when useful, without repeating supplied retrievals.'
         try:
             raw=ask(writer_prompt,model_json(payload),tools,tool_handlers=handlers,response_schema=analyst_schema(),required_tools=set(),trace=trace,trace_stage='suggestions',max_tokens=3000,model=model)
-            brief,cards=validate_output(raw,catalog,result,rules)
+            brief,cards=validate_output(raw,catalog,result,rules,warnings)
+            if not cards and AnalystOutput.model_validate_json(raw).suggestions:
+                raise ValueError('No verifiable analyst cards remained after evidence checks')
+            card_warnings={card['id']:card.pop('validation_warnings') for card in cards}
             action_warnings={}
             for card in cards:
                 try:
@@ -301,21 +338,21 @@ def generate_suggestions(ask,prompt,data,result,rules,handoff,previous,progress=
                 if action:
                     action_sources={source for id in action['fact_ids'] for source in catalog.get(id,{}).get('sources',[])}
                     card['sources']=sorted(set(card['sources'])|action_sources)
-            review=None
-            try:
-                review=review_suggestions(ask,model,brief,cards,tool_result,catalog,rules,trace)
-            except Exception:
-                warnings.append('Factual review unavailable. The analyst response is published without a completed factual review.')
-            all_warnings,overview_warnings=attach_review_warnings(cards,review,warnings)
+            # Development phase: no second paid model opinion. Deterministic
+            # citations, structure and action checks above still apply.
+            all_warnings,overview_warnings=attach_review_warnings(cards,None,warnings)
             for card in cards:
+                for warning in card_warnings[card['id']]:
+                    card['review_warnings'].append(warning)
+                    all_warnings.append(warning)
                 if card['id'] in action_warnings:
                     warning=action_warnings[card['id']]
                     card['review_warnings'].append(warning)
                     all_warnings.append(warning)
             warnings[:]=all_warnings
-            return dict(brief=brief,suggestions=cards,ai_mode='Live AI · POC review',suggestion_origin='analyst',analyst_error=None,
+            return dict(brief=brief,suggestions=cards,ai_mode='Live AI · synthetic test',suggestion_origin='analyst',analyst_error=None,
                         validation_mode='narrative_warnings',validation_warnings=list(warnings),analysis_review_warnings=overview_warnings,
-                        analyst_audit=audit(review.model_dump() if review else dict(status='unavailable')))
+                        analyst_audit=audit(dict(status='disabled_for_development')))
         except Exception as exc:
             reason=str(exc)[:500] if isinstance(exc,ValueError) else 'Model service unavailable'
             attempts.append(dict(attempt=1,error=reason))
@@ -338,7 +375,7 @@ def review_suggestions(ask,model,brief,cards,tool_result,catalog,rules,trace):
         proposed_card['recommended_action']=card.get('recommended_action')
     scenarios=[]
     for t in trace:
-        if t['name'] not in ('simulate_fx_conversion','assess_funding_plan','assess_fx_trade','assess_receipt_match','assess_round_trip','assess_forward_hedge'):continue
+        if t['name'] not in ('simulate_fx_conversion','assess_funding_plan','assess_fx_trade','assess_allocation_plan','assess_receipt_match','assess_round_trip','assess_forward_hedge'):continue
         value=scenario_summary(t['result'])
         # Exact scenario IDs keep comparisons and independent scenarios clear.
         scenarios.append({k:v for k,v in value.items() if k!='facts'})

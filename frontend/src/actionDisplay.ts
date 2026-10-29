@@ -7,7 +7,7 @@ export type ConversionAction={
  timing?:{calendar_days_before_first_shortfall:number|null;earliest_modeled_shortfall:string|null;settlement_is_weekday:boolean;bank_delivery_confirmed:false}|null;
  rate_basis:'treasury_sheet';
 };
-export type ScenarioAction={assessment_id:string;kind:'conversion'|'receipt_match'|'cancel_orders'|'forward';display_rows:{label:string;value:string}[];rate_basis:'treasury_sheet'|'simulated_forward'|'not_applicable';settlement_date?:string|null};
+export type ScenarioAction={assessment_id:string;kind:'conversion'|'allocation_plan'|'receipt_match'|'cancel_orders'|'forward';display_rows:{label:string;value:string}[];rate_basis:'treasury_sheet'|'simulated_forward'|'not_applicable';settlement_date?:string|null};
 export type RecommendedAction=ConversionAction|ScenarioAction;
 
 const units:Record<string,{symbol:string;name:string}>={
@@ -23,8 +23,9 @@ function money(currency:string,amount:string,maxDigits=2){
 
 export function actionRows(action?:RecommendedAction|null){
  if(action&&'display_rows' in action){
-  if(!['conversion','receipt_match','cancel_orders','forward'].includes(action.kind)||!Array.isArray(action.display_rows)||action.display_rows.length<1||action.display_rows.length>5)return null;
-  if(action.kind==='forward'&&action.rate_basis!=='simulated_forward')return null;
+   if(!['conversion','allocation_plan','receipt_match','cancel_orders','forward'].includes(action.kind)||!Array.isArray(action.display_rows)||action.display_rows.length<1||action.display_rows.length>5)return null;
+   if(action.kind==='forward'&&action.rate_basis!=='simulated_forward')return null;
+   if(action.kind==='allocation_plan'&&action.rate_basis!=='treasury_sheet')return null;
   return action.display_rows.every(r=>typeof r.label==='string'&&typeof r.value==='string'&&r.label&&r.value)?action.display_rows:null;
  }
  if(!action||action.rate_basis!=='treasury_sheet')return null;
@@ -48,7 +49,7 @@ export function actionRows(action?:RecommendedAction|null){
 }
 
 export function timingNote(action?:RecommendedAction|null){
- if(action&&'display_rows' in action)return action.kind==='forward'?'Illustrative forward terms only; bank pricing and delivery are unconfirmed.':action.kind==='conversion'?'Timing checked against simulated rules; bank delivery is unconfirmed.':null;
+  if(action&&'display_rows' in action)return action.kind==='forward'?'Illustrative forward terms only; bank pricing and delivery are unconfirmed.':action.kind==='conversion'||action.kind==='allocation_plan'?'Sheet prices and timing are indicative; confirm live prices, bank delivery and the combined plan before trading.':null;
  if(!action?.settlement_date)return null;
  const days=action.timing?.calendar_days_before_first_shortfall;
  let margin='';

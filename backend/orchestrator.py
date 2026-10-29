@@ -37,8 +37,20 @@ def funding_tasks(data, result):
 def run_orchestrator(*,ask,prompt,data,result,rules,handoff,previous,tools,handlers,trace,model,write,progress=None):
     tasks=funding_tasks(data,result)
     # All validated values remain available, without repeated row provenance.
-    context=dict(handoff=handoff,workbooks=data,calculations=result,policy=rules,previous_snapshot=previous)
-    analyst_prompt=prompt.split('## Output contract')[0]
+    dates=sorted({r['date'] for r in result['forecast']})
+    # The writer receives the complete prompt, forecast and previous snapshot.
+    # Funding selection only needs its assigned currency's daily path plus all
+    # positions/workbook flows to choose a source and test it with the tool.
+    funding_prompt=('You are choosing a synthetic FX funding scenario, not recommending a trade. '
+        'Use the assigned calculation tool for the assigned currency and an eligible obligation. '
+        'Choose the source, destination amount sized to the cushion gap (not automatically the full payment), '
+        'a proposed arrival with margin before the earliest baseline or receipt-sensitive breach where possible, '
+        'and a nonzero Expected-receipt delay. Choose a settlement_date only from the tool schema: '
+        'all dates are within the saved forecast, from '+dates[0]+' through '+dates[-1]+'. '
+        'If the earliest shortfall is today or settlement is infeasible, still test a scenario and report its failed checks; '
+        'do not pretend same-day settlement, a weekday, or an unconfirmed bank cutoff is safe. '
+        'No execution, invented prices, approval or guaranteed delivery. Tool failures can be corrected. '
+        'After the calculation, the full-context writer will judge the result and can test alternatives.')
 
     def assess(state):
         reports=[]
@@ -47,19 +59,30 @@ def run_orchestrator(*,ask,prompt,data,result,rules,handoff,previous,tools,handl
             currency=task['currency']
             if progress:progress(f'Assessing funding scenarios for {currency}')
             local_trace=[]
-            scoped={}
-            for name,spec in handlers.items():
-                def execute(_name=name,_spec=spec,**args):
-                    if _name=='assess_funding_plan' and args.get('obligation_id') not in task['eligible_obligation_ids']:
-                        raise ValueError('Choose an eligible payment ID for the assigned funding currency')
-                    if _name=='simulate_fx_conversion' and args.get('target')!=currency:
-                        raise ValueError('The conversion target must be the assigned funding currency')
-                    return _spec['handler'](**args)
-                scoped[name]=dict(spec,handler=execute)
+            name=task['required_tool']
+            spec=handlers[name]
+            def execute(_name=name,_spec=spec,**args):
+                if _name=='assess_funding_plan' and args.get('obligation_id') not in task['eligible_obligation_ids']:
+                    raise ValueError('Choose an eligible payment ID for the assigned funding currency')
+                if _name=='assess_funding_plan' and args.get('settlement_date') not in dates:
+                    raise ValueError('Settlement must be within the saved forecast')
+                if _name=='simulate_fx_conversion' and args.get('target')!=currency:
+                    raise ValueError('The conversion target must be the assigned funding currency')
+                return _spec['handler'](**args)
+            scoped={name:dict(spec,handler=execute)}
+            if name=='assess_funding_plan':
+                parameters=dict(spec['parameters'],properties=dict(spec['parameters']['properties']))
+                parameters['properties']['settlement_date']=dict(parameters['properties']['settlement_date'],enum=dates)
+                scoped[name]['parameters']=parameters
+            scoped_context=dict(workbooks=data,policy=rules,funding_task=task,
+                calculations=dict(positions=result['positions'],exposure_pct=result['exposure_pct'],
+                    forecast=[r for r in result['forecast'] if r['currency']==currency],
+                    findings=[f for f in result['findings'] if f['currency']==currency],
+                    forecast_start=dates[0],forecast_end=dates[-1]))
             error=None
             try:
-                ask(analyst_prompt+'\nChoose the assigned funding scenario and call its required calculation tool; no prose memo is needed. Choose source, destination amount, earlier arrival date and a meaningful nonzero receipt-delay assumption yourself. Size against the forecast gap, not the full payment. Follow the Funding timing instructions. After a valid calculation, control moves directly to the writer, which can test alternatives or corrections before recommending. Failed tool inputs remain correctable; failed financial checks are evidence, not a suitable plan.',
-                    model_json(dict(context,funding_task=task)),tools,
+                ask(funding_prompt,
+                    model_json(scoped_context),
                     tool_handlers=scoped,required_tools={task['required_tool']},trace=local_trace,
                     trace_stage='funding_assessment',max_tokens=650,model=model,stop_after_required_tools=True)
             except Exception:

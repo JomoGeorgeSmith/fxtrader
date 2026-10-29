@@ -60,6 +60,17 @@ test('forward terms cannot be presented as Treasury spot prices',()=>{
  assert.match(timingNote(forward)!,/Illustrative forward terms only/);
  assert.equal(actionRows({...forward,rate_basis:'treasury_sheet'}),null);
 });
+test('a joint sale displays both destinations with payment dates and indicative conditions',()=>{
+ const plan:ScenarioAction={assessment_id:'fx.allocation',kind:'allocation_plan',rate_basis:'treasury_sheet',display_rows:[
+  {label:'Sell USD',value:'USD 1,197,579.30'},
+  {label:'For CAD payment',value:'Sell USD 809,229.78 to buy CAD 1,100,000.00 by 2026-11-16 (TEST-CAD)'},
+  {label:'For JMD payment',value:'Sell USD 388,349.52 to buy JMD 60,000,000.00 by 2026-11-16 (TEST-JMD)'},
+  {label:'Indicative fees',value:'JMD 95,003.00'},
+ ]};
+ assert.deepEqual(actionRows(plan),plan.display_rows);
+ assert.match(timingNote(plan)!,/confirm live prices, bank delivery and the combined plan/);
+ assert.equal(actionRows({...plan,rate_basis:'not_applicable'}),null);
+});
 test('malformed or unrecognized scenario actions are not displayed',()=>{
  assert.equal(actionRows({assessment_id:'x',kind:'forward',rate_basis:'simulated_forward',display_rows:[]}),null);
  assert.equal(actionRows({assessment_id:'x',kind:'conversion',rate_basis:'treasury_sheet',display_rows:[{label:'',value:'x'}]}),null);

@@ -61,7 +61,7 @@ def publish(data,rules,catalog,kind,arguments,report,values,action):
         catalog[fact['id']]=fact;facts.append(fact)
     return dict(scenario_id=prefix,kind=kind,**report,facts=facts,
         action_fields=action,
-        assumptions=['Independent hypothetical change; no trade, allocation or cancellation is executed.',
+        assumptions=['Independent hypothetical plan; its own legs are checked together. No trade, allocation or cancellation is executed.' if kind=='allocation_plan' else 'Independent hypothetical change; no trade, allocation or cancellation is executed.',
             'All new terms, calendars, confirmations and prices are synthetic assumptions, not real bank commitments.',
             'Daily cash checks use prior-close funding, not verified intraday ordering. Protected reserves and LCR/NSFR are unchanged.',
             'Current exposure receives this scenario change only; this is not a complete dated risk/capital forecast.'])
@@ -92,6 +92,75 @@ def assess_fx_trade(data,result,rules,catalog,source,target,target_amount,settle
     return publish(data,rules,catalog,'conversion',dict(source=source,target=target,target_amount=target_amount,settlement_date=day,booking_hour=booking_hour,expected_receipt_delay_days=expected_receipt_delay_days),
         dict(source=source,target=target,source_principal=float(principal),target_received=float(amount),settlement_date=day,fee_jmd=float(cost),
             scenarios=scenarios,checks=checks,timing=timing,risk=risk,passes_modeled_checks=scenarios['baseline']['passes_modeled_checks']),values,action)
+
+
+def assess_allocation_plan(data,result,rules,catalog,source,legs,booking_hour=12,expected_receipt_delay_days=3):
+    """Test one analyst-selected source sale into payment-linked destinations as a unit."""
+    if source not in CURRENCIES or not isinstance(legs,list) or not 2<=len(legs)<=3:
+        raise ValueError('Choose a supported source and two or three allocation legs')
+    if isinstance(booking_hour,bool) or not isinstance(booking_hour,int) or not 0<=booking_hour<=23:
+        raise ValueError('Invalid booking hour')
+    if isinstance(expected_receipt_delay_days,bool) or not isinstance(expected_receipt_delay_days,int) or not 1<=expected_receipt_delay_days<=28:
+        raise ValueError('Use a nonzero integer receipt delay up to 28 days')
+    first=snapshot_dates(result)[0]
+    events=[];changes={};allocation=[];timings=[];targets=set();payments=set();totals={};values=[]
+    for leg in legs:
+        if not isinstance(leg,dict) or set(leg)!={'target','target_amount','settlement_date','obligation_id'}:
+            raise ValueError('Each leg needs a destination, amount, arrival date and existing payment ID')
+        target=leg['target']
+        if target not in CURRENCIES or target==source or target in targets:
+            raise ValueError('Choose distinct destination currencies different from the source')
+        targets.add(target)
+        payment=active(data,'payments',leg['obligation_id'])
+        if payment['id'] in payments or payment['currency']!=target:
+            raise ValueError('Choose distinct payments in the matching destination currencies')
+        payments.add(payment['id'])
+        amount=money(leg['target_amount']);day=date_in(result,leg['settlement_date']);due=date_in(result,payment['value_date'])
+        allocated=sum((D(row['amount']) for row in data.get('fx_allocations',[]) if row['obligation_id']==payment['id']),D(0))
+        covered=sum((D(row['target_amount']) for key,status in (('fx_orders','Booked'),('fx_hedges','Active')) for row in data.get(key,[])
+                     if row['obligation_id']==payment['id'] and row['status']==status),D(0))
+        if amount>D(payment['amount'])-allocated-covered:
+            raise ValueError('Allocation exceeds remaining uncovered payment')
+        principal=(amount/sheet_rate(data,source,target)).quantize(CENT,rounding=ROUND_CEILING)
+        cost=fee(data,source,principal)
+        timing=settlement_check(data,source,target,day,first,booking_hour)
+        timings.append(timing)
+        events.extend([(day,source,-principal),(day,target,amount),(day,'JMD',-cost)])
+        changes[source]=changes.get(source,D(0))-principal
+        changes[target]=changes.get(target,D(0))+amount
+        totals[day]=totals.get(day,D(0))+principal
+        allocation.append(dict(target=target,target_amount=float(amount),source_principal=float(principal),fee_jmd=float(cost),
+            settlement_date=day,obligation_id=payment['id'],payment_date=due,reference_rate=str(sheet_rate(data,source,target))))
+        values.extend([(f'leg{len(allocation)}_source','Source sold for '+target,principal,'money',source),
+            (f'leg{len(allocation)}_target','Amount allocated to '+payment['id'],amount,'money',target),
+            (f'leg{len(allocation)}_arrival','Proposed '+target+' arrival',day,'date',target)])
+    risk=exposure_check(data,rules,changes)
+    prior=D(next(r['net_fx_exposure'] for r in data['risk'] if r['currency']==source))
+    total_sold=-changes[source];total_fee=sum((D(leg['fee_jmd']) for leg in allocation),D(0))
+    # Include every currency: another shortfall cannot be hidden by omitting it
+    # from the analyst's proposed allocation.
+    scenarios=project(data,result,rules,events,set(CURRENCIES),expected_receipt_delay_days)
+    checks=dict(source_position_reduced=abs(prior-total_sold)<abs(prior),
+        all_payments_coverable=all(leg['settlement_date']<leg['payment_date'] for leg in allocation),
+        no_duplicate_planned_cover=all(not any(o['status']=='Planned' and o['obligation_id']==leg['obligation_id'] for o in data.get('fx_orders',[])) for leg in allocation),
+        source_account_capacity=all(amount+(sum((D(leg['fee_jmd']) for leg in allocation if leg['settlement_date']==day),D(0)) if source=='JMD' else 0)<=source_capacity(data,source,day) for day,amount in totals.items()),
+        fee_account_capacity=all(sum((D(leg['fee_jmd']) for leg in allocation if leg['settlement_date']==day),D(0))+(totals[day] if source=='JMD' else 0)<=source_capacity(data,'JMD',day) for day in totals),
+        all_debit_account_limits=debit_permissions(data,events),
+        simulated_settlement_ready=all(t['lead_time_satisfied'] and t['arrival_is_business_day'] for t in timings),
+        exposure_preserved=risk['aggregate_within_limit'] and risk['currency_limits_preserved'])
+    for scenario in scenarios.values():scenario['passes_modeled_checks']=scenario['passes_cash_checks'] and all(checks.values())
+    values.extend([('total_sold','Total source currency sold',total_sold,'money',source),
+        ('total_fee_jmd','Total simulated conversion fees',total_fee,'money','JMD'),
+        ('source_exposure_before','Independent source risk position before plan',prior,'money',source),
+        ('source_exposure_after','Independent source risk position after plan',prior-total_sold,'money',source),
+        ('source_stressed_low','Source cash low without Expected receipts',scenarios['without_expected_receipts']['lows'][source],'money',source)])
+    action=[dict(label='Sell '+source,value=fmt(source,total_sold))]
+    action.extend(dict(label='For '+leg['target']+' payment',value='Sell '+fmt(source,leg['source_principal'])+' to buy '+fmt(leg['target'],leg['target_amount'])+' by '+leg['settlement_date']+' ('+leg['obligation_id']+')') for leg in allocation)
+    action.append(dict(label='Indicative fees',value=fmt('JMD',total_fee)))
+    return publish(data,rules,catalog,'allocation_plan',dict(source=source,legs=[dict(target=leg['target'],target_amount=str(money(leg['target_amount'])),settlement_date=leg['settlement_date'],obligation_id=leg['obligation_id']) for leg in legs],booking_hour=booking_hour,expected_receipt_delay_days=expected_receipt_delay_days),
+        dict(source=source,legs=allocation,total_sold=float(total_sold),total_fee_jmd=float(total_fee),checks=checks,timing=timings,risk=risk,scenarios=scenarios,
+            passes_modeled_checks=all(s['passes_modeled_checks'] for s in scenarios.values()),
+            comparison='All legs are tested together against every currency cash cushion, payment coverage, account limits and exposure. No proven profit or live quote; future settlement at current sheet rates is illustrative.'),values,action)
 
 
 def assess_receipt_match(data,result,rules,catalog,receipt_id,obligation_id,amount,purchase_order_id):
@@ -244,7 +313,9 @@ def scenario_tools(data,result,rules,catalog):
     amount=dict(type='number',exclusiveMinimum=0,description='Destination/receipt amount, at most two decimals.')
     definitions={
         'assess_fx_trade':(assess_fx_trade,'Test your dated currency sale/purchase for concentration reduction or funding-source comparison; checks currency/aggregate exposure, fees, account permissions, cash cushions and simulated settlement. Compare alternatives yourself; no ranking/execution.',
-            dict(source=currency,target=currency,target_amount=amount,settlement_date=text('ISO arrival date inside forecast; you choose it.'),booking_hour=dict(type='integer',minimum=0,maximum=23),expected_receipt_delay_days=dict(type='integer',minimum=1,maximum=28))),
+             dict(source=currency,target=currency,target_amount=amount,settlement_date=text('ISO arrival date inside forecast; you choose it.'),booking_hour=dict(type='integer',minimum=0,maximum=23),expected_receipt_delay_days=dict(type='integer',minimum=1,maximum=28))),
+        'assess_allocation_plan':(assess_allocation_plan,'Optionally test YOUR proposed sale of one currency into two or three distinct currencies needed for recorded payments. No destination, amount or trade is selected by code. All legs, fees, dates, cash cushions and exposure are checked together; failed or receipt-dependent plans cannot become action rows.',
+            dict(source=currency,legs=dict(type='array',minItems=2,maxItems=3,items=dict(type='object',properties=dict(target=currency,target_amount=amount,settlement_date=text('ISO date within forecast'),obligation_id=text('Existing payment ID')),required=['target','target_amount','settlement_date','obligation_id'],additionalProperties=False)),booking_hour=dict(type='integer',minimum=0,maximum=23),expected_receipt_delay_days=dict(type='integer',minimum=1,maximum=28))),
         'assess_receipt_match':(assess_receipt_match,'Test using an existing receipt instead of part/all of a linked planned FX purchase; no receipt is counted twice. Checks earmarks, coverage, timing, confirmations and cash. Requires a real planned purchase ID linked to payment, not an invented avoided trade.',
             dict(receipt_id=text(),obligation_id=text(),amount=amount,purchase_order_id=text())),
         'assess_round_trip':(assess_round_trip,'Compare completing two opposite outstanding FX orders with cancelling both; test intermediate liquidity, fees, cancellation terms and exposure. Only exact target/source matches without linked obligations; no invented trade savings.',

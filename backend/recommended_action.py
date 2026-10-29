@@ -13,7 +13,7 @@ def recommended_action(assessment_id,trace,data):
     """Never choose a trade or prevent other suggestions from publishing."""
     if not assessment_id:
         return None,None
-    matches=[t['result'] for t in trace if t['name'] in ('assess_funding_plan','simulate_fx_conversion','assess_fx_trade','assess_receipt_match','assess_round_trip','assess_forward_hedge')
+    matches=[t['result'] for t in trace if t['name'] in ('assess_funding_plan','simulate_fx_conversion','assess_fx_trade','assess_allocation_plan','assess_receipt_match','assess_round_trip','assess_forward_hedge')
         and isinstance(t.get('result'),dict) and (t['result'].get('plan_id') or t['result'].get('scenario_id'))==assessment_id]
     if not matches:
         return None,'The selected action has no matching calculation result. No recommended action is shown.'
@@ -22,7 +22,7 @@ def recommended_action(assessment_id,trace,data):
         if not result.get('passes_modeled_checks'):
             return None,'The selected scenario fails its modeled checks. The insight is retained, without a recommended action.'
         return dict(assessment_id=assessment_id,kind=result['kind'],display_rows=result['action_fields'],
-            rate_basis='simulated_forward' if result['kind']=='forward' else 'treasury_sheet' if result['kind']=='conversion' else 'not_applicable',
+            rate_basis='simulated_forward' if result['kind']=='forward' else 'treasury_sheet' if result['kind'] in ('conversion','allocation_plan') else 'not_applicable',
             settlement_date=result.get('settlement_date'),fact_ids=[f['id'] for f in result['facts']]),None
     source,target=result['source'],result['target']
     if result.get('plan_id'):

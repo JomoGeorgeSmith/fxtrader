@@ -48,6 +48,15 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(payload['policy'],self.rules)
         task=payload['funding_task']
         name=task['required_tool']
+        self.assertEqual({r['currency'] for r in payload['calculations']['forecast']},{task['currency']})
+        self.assertNotIn('previous_snapshot',payload)
+        self.assertEqual(payload['calculations']['forecast_start'],self.result['forecast'][0]['date'])
+        self.assertEqual(set(kwargs['tool_handlers']),{name})
+        if name=='assess_funding_plan':
+            dates=kwargs['tool_handlers'][name]['parameters']['properties']['settlement_date']['enum']
+            self.assertEqual(dates[0],payload['calculations']['forecast_start'])
+            self.assertEqual(dates[-1],payload['calculations']['forecast_end'])
+            self.assertIn(dates[0],prompt)
         self.assertEqual(kwargs['required_tools'],{name})
         self.assertTrue(kwargs['stop_after_required_tools'])
         self.assertTrue(kwargs['model'])
@@ -147,6 +156,15 @@ class OrchestratorTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'eligible payment'):
                 kwargs['tool_handlers']['assess_funding_plan']['handler'](source='JMD',obligation_id=wrong,
                     target_amount=1000,settlement_date=self.result['forecast'][0]['date'])
+            return self.fake_ask(prompt,content,tools,**kwargs)
+        self.assertEqual(self.run_graph(ask)['assessments'][0]['status'],'assessed')
+
+    def test_settlement_outside_forecast_is_rejected_without_tool_execution(self):
+        def ask(prompt,content,tools=None,**kwargs):
+            handler=kwargs['tool_handlers']['assess_funding_plan']['handler']
+            with self.assertRaisesRegex(ValueError,'within the saved forecast'):
+                handler(source='JMD',obligation_id=json.loads(content)['funding_task']['eligible_obligation_ids'][0],
+                    target_amount=1000,settlement_date='2026-01-01')
             return self.fake_ask(prompt,content,tools,**kwargs)
         self.assertEqual(self.run_graph(ask)['assessments'][0]['status'],'assessed')
 

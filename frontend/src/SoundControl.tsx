@@ -1,17 +1,19 @@
 import {useEffect,useRef,useState} from 'react';
 import {Volume2,VolumeX,Play,X} from 'lucide-react';
 import {SuggestionAudio,newSuggestionSounds,type SoundSuggestion,type Severity} from './sounds';
+import {materialLiquidityWorsening,type LiquiditySnapshot} from './liquidityAlerts';
 
 function savedVolume(){try{const value=localStorage.getItem('jn-sfx-volume');return value===null ? .4 : Math.max(0,Math.min(1,Number(value)||0))}catch{return .4}}
 
-export default function SoundControl({analysis}:{analysis:{id:string;suggestions:SoundSuggestion[]}|null}){
+type AudibleAnalysis=LiquiditySnapshot&{id:string;suggestions:SoundSuggestion[]};
+export default function SoundControl({analysis}:{analysis:AudibleAnalysis|null}){
  const [open,setOpen]=useState(false),[enabled,setEnabled]=useState(false),[volume,setVolume]=useState(savedVolume),[error,setError]=useState('');
  const engine=useRef<SuggestionAudio|null>(null);
- const previous=useRef<{id:string;suggestions:SoundSuggestion[]}|null>(null);
+  const previous=useRef<AudibleAnalysis|null>(null);
  const container=useRef<HTMLDivElement>(null);
  const toggle=useRef<HTMLButtonElement>(null);
  useEffect(()=>{engine.current=new SuggestionAudio();return()=>engine.current?.close()},[]);
- useEffect(()=>{if(!analysis||analysis.id===previous.current?.id)return;const old=previous.current;previous.current=analysis;if(enabled){for(const level of newSuggestionSounds(old?.suggestions??[],analysis.suggestions))engine.current?.play(level)}},[analysis,enabled]);
+  useEffect(()=>{if(!analysis||analysis.id===previous.current?.id)return;const old=previous.current;previous.current=analysis;if(enabled){const levels=newSuggestionSounds(old?.suggestions??[],analysis.suggestions);if(old&&materialLiquidityWorsening(analysis,old).length&&!levels.includes('critical'))levels.unshift('critical');for(const level of levels)engine.current?.play(level)}},[analysis,enabled]);
  useEffect(()=>{engine.current?.volume(volume);try{localStorage.setItem('jn-sfx-volume',String(volume))}catch{/* Storage can be disabled. */}},[volume]);
  useEffect(()=>{if(!open)return;function outside(e:PointerEvent){if(!container.current?.contains(e.target as Node))setOpen(false)}function escape(e:KeyboardEvent){if(e.key==='Escape'){setOpen(false);toggle.current?.focus()}}document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}},[open]);
  async function activate(){setError('');try{await engine.current?.unlock(volume);setEnabled(true);engine.current?.stop();engine.current?.play('info')}catch{setError('Your browser could not enable sound. Try again.')}}

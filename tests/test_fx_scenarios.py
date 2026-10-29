@@ -13,7 +13,7 @@ from backend.calculations import evaluate
 from backend.analyst import build_evidence,generate_suggestions
 from backend.funding_plan import assess_funding_plan
 from backend.fx_market import settlement_check,business_day,source_capacity
-from backend.fx_scenarios import assess_fx_trade,assess_receipt_match,assess_round_trip,assess_forward_hedge,scenario_tools
+from backend.fx_scenarios import assess_fx_trade,assess_allocation_plan,assess_receipt_match,assess_round_trip,assess_forward_hedge,scenario_tools
 from backend.recommended_action import recommended_action
 from backend.seed import ROOT,seed
 from backend.simulation_inputs import TABLES,SIMULATION_FILE,read_simulation,validate_links
@@ -53,6 +53,20 @@ class FXScenarioTests(unittest.TestCase):
     def trade(self,**args):
         params=dict(source='GBP',target='USD',target_amount=1000,settlement_date=self.business(5),booking_hour=12,expected_receipt_delay_days=3);params.update(args)
         return assess_fx_trade(self.data,self.result(),self.rules,self.catalog,**params)
+
+    def allocation_fixture(self):
+        next(a for a in self.data['accounts'] if a['currency']=='USD')['balance']=5000000
+        next(r for r in self.data['risk'] if r['currency']=='USD')['net_fx_exposure']=6200000
+        next(r for r in self.data['fx_limits'] if r['currency']=='USD')['max_absolute_exposure']=5031446.54
+        for id,currency,amount,day in [('TEST-CAD','CAD',1100000,20),('TEST-JMD','JMD',60000000,21)]:
+            self.data['payments'].append(dict(id=id,currency=currency,amount=amount,value_date=self.day(day),status='Committed',_source='test'))
+        return [dict(target='CAD',target_amount=1100000,settlement_date=self.business(9),obligation_id='TEST-CAD'),
+                dict(target='JMD',target_amount=60000000,settlement_date=self.business(9),obligation_id='TEST-JMD')]
+
+    def allocation(self,**args):
+        legs=self.allocation_fixture()
+        params=dict(source='USD',legs=legs,booking_hour=12,expected_receipt_delay_days=3);params.update(args)
+        return assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,**params)
 
     def hedge(self,**args):
         p=next(p for p in self.data['payments'] if p['id']=='PAY-003');p['value_date']=self.day(20)
@@ -127,6 +141,54 @@ class FXScenarioTests(unittest.TestCase):
     def test_trade_rejects_bad_amount_currency_and_stress(self):
         for args in (dict(target_amount=-1),dict(target_amount=float('nan')),dict(target_amount=1.001),dict(target='GBP'),dict(expected_receipt_delay_days=0)):
             with self.subTest(args=args),self.assertRaises(ValueError):self.trade(**args)
+
+    def test_combined_sale_allocates_proceeds_to_payments_and_preserves_stressed_cash(self):
+        r=self.allocation()
+        self.assertTrue(r['passes_modeled_checks'],r['checks'])
+        self.assertEqual([leg['obligation_id'] for leg in r['legs']],['TEST-CAD','TEST-JMD'])
+        self.assertAlmostEqual(sum(leg['source_principal'] for leg in r['legs']),r['total_sold'])
+        self.assertLess(r['risk']['currency_exposures']['USD'],5031446.54)
+        self.assertGreaterEqual(r['scenarios']['without_expected_receipts']['lows']['USD'],self.rules['minimum_available']['USD'])
+        action,warning=recommended_action(r['scenario_id'],[dict(name='assess_allocation_plan',result=r)],self.data)
+        self.assertIsNone(warning);self.assertEqual(action['kind'],'allocation_plan')
+        self.assertIn('TEST-CAD',action['display_rows'][1]['value'])
+        self.assertIn('TEST-JMD',action['display_rows'][2]['value'])
+
+    def test_combined_sale_is_not_recommended_when_source_cash_is_needed(self):
+        r=self.allocation()
+        next(a for a in self.data['accounts'] if a['currency']=='USD')['balance']=3000000
+        r=assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',[
+            dict(target=leg['target'],target_amount=leg['target_amount'],settlement_date=leg['settlement_date'],obligation_id=leg['obligation_id']) for leg in r['legs']])
+        self.assertFalse(r['passes_modeled_checks'])
+        self.assertFalse(r['scenarios']['without_expected_receipts']['cash_cushions_preserved'])
+        self.assertIsNone(recommended_action(r['scenario_id'],[dict(name='assess_allocation_plan',result=r)],self.data)[0])
+
+    def test_combined_sale_checks_all_currencies_and_joint_daily_limits(self):
+        r=self.allocation();legs=[dict(target=leg['target'],target_amount=leg['target_amount'],settlement_date=leg['settlement_date'],obligation_id=leg['obligation_id']) for leg in r['legs']]
+        next(p for p in self.data['fx_permissions'] if p['currency']=='USD')['daily_debit_limit']=r['total_sold']-1
+        failed=assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',legs)
+        self.assertFalse(failed['checks']['source_account_capacity']);self.assertFalse(failed['passes_modeled_checks'])
+        next(p for p in self.data['fx_permissions'] if p['currency']=='USD')['daily_debit_limit']=1000000000
+        next(p for p in self.data['payments'] if p['id']=='PAY-004')['amount']=1000000001
+        failed=assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',legs)
+        self.assertFalse(failed['scenarios']['baseline']['cash_cushions_preserved'])
+
+    def test_combined_sale_must_really_resolve_currency_exposure_limit(self):
+        legs=self.allocation_fixture()
+        legs[0]['target_amount']=1000;legs[1]['target_amount']=1000
+        r=assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',legs)
+        self.assertFalse(r['checks']['exposure_preserved'])
+        self.assertFalse(r['passes_modeled_checks'])
+        self.assertIsNone(recommended_action(r['scenario_id'],[dict(name='assess_allocation_plan',result=r)],self.data)[0])
+
+    def test_combined_sale_rejects_invented_or_duplicate_payment_cover(self):
+        legs=self.allocation_fixture()
+        with self.assertRaises(ValueError):assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',[dict(legs[0],obligation_id='NO-PAYMENT'),legs[1]])
+        with self.assertRaises(ValueError):assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',[dict(legs[0],target_amount=1100001),legs[1]])
+        with self.assertRaises(ValueError):assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',[legs[0],dict(legs[1],target='CAD')])
+        with self.assertRaises(ValueError):assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',[legs[0],legs[1]],expected_receipt_delay_days=0)
+        self.data['fx_orders'].append(dict(id='PLANNED-CAD',status='Planned',obligation_id='TEST-CAD',_source='test'))
+        self.assertFalse(assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',legs)['checks']['no_duplicate_planned_cover'])
 
     def test_currency_limit_breach_is_not_hidden_by_aggregate_headroom(self):
         next(r for r in self.data['fx_limits'] if r['currency']=='USD')['max_absolute_exposure']=1
@@ -257,7 +319,7 @@ class FXScenarioTests(unittest.TestCase):
         r['passes_modeled_checks']=False
         self.assertIsNone(recommended_action(r['scenario_id'],trace,self.data)[0])
 
-    def test_new_tools_available_in_writer_and_review_without_forced_investigations(self):
+    def test_new_tools_available_in_writer_without_forced_investigations(self):
         result=self.result();result['findings']=[]
         calls=[]
         def model(prompt,content,tools=None,**kwargs):
@@ -266,9 +328,9 @@ class FXScenarioTests(unittest.TestCase):
             self.assertTrue(set(scenario_tools(self.data,result,self.rules,{}))<=kwargs['tool_handlers'].keys())
             return json.dumps(dict(brief='No supported additional action is needed in this fixture.',suggestions=[]))
         output=generate_suggestions(model,(ROOT/'backend/prompts/fx_analyst.md').read_text(encoding='utf-8'),self.data,result,self.rules,'Validated',None)
-        self.assertEqual(calls,['AnalystOutput','EvidenceReview']);self.assertEqual(output['suggestion_origin'],'analyst')
+        self.assertEqual(calls,['AnalystOutput']);self.assertEqual(output['suggestion_origin'],'analyst')
 
-    def test_selected_new_action_and_its_calculations_reach_independent_reviewer(self):
+    def test_selected_new_action_reaches_card_without_independent_reviewer(self):
         result=self.result();result['findings']=[];calls=[]
         def model(prompt,content,tools=None,**kwargs):
             title=kwargs['response_schema']['title'];calls.append(title)
@@ -280,7 +342,27 @@ class FXScenarioTests(unittest.TestCase):
             kwargs['trace'].append(dict(name='assess_fx_trade',arguments={},result=scenario))
             return json.dumps(dict(brief='One small, independently tested option is available.',suggestions=[dict(topic='test_option',currency='USD',severity='info',title='Consider the small purchase',summary='This is a hypothetical cash purchase, not a completed trade.',detail='The test preserves the modeled cash cushions but does not establish profit or real bank delivery.',assumptions=[],finding_ids=[],fact_ids=[scenario['facts'][0]['id']],rule_ids=[],action_id=scenario['scenario_id'],expected_result='This would provide the tested dollars under the simulation assumptions.')]))
         out=generate_suggestions(model,(ROOT/'backend/prompts/fx_analyst.md').read_text(encoding='utf-8'),self.data,result,self.rules,'Validated',None)
-        self.assertEqual(calls,['AnalystOutput','EvidenceReview']);self.assertEqual(out['suggestions'][0]['recommended_action']['kind'],'conversion')
+        self.assertEqual(calls,['AnalystOutput']);self.assertEqual(out['suggestions'][0]['recommended_action']['kind'],'conversion')
+
+    def test_writer_can_choose_one_full_allocation_card_without_forcing_a_trade(self):
+        legs=self.allocation_fixture();result=self.result();result['findings']=[];reviewed=[]
+        def model(prompt,content,tools=None,**kwargs):
+            if kwargs['response_schema']['title']=='EvidenceReview':
+                payload=json.loads(content);reviewed.append(payload['scenario_results'][0]['kind'])
+                self.assertEqual(payload['proposed']['suggestions'][0]['recommended_action']['kind'],'allocation_plan')
+                return json.dumps(dict(valid=True,errors=[]))
+            scenario=kwargs['tool_handlers']['assess_allocation_plan']['handler'](source='USD',legs=legs,booking_hour=12,expected_receipt_delay_days=3)
+            kwargs['trace'].append(dict(name='assess_allocation_plan',arguments=dict(source='USD',legs=legs),result=scenario))
+            return json.dumps(dict(brief='The two-payment allocation is an optional, jointly tested synthetic plan.',suggestions=[dict(
+                topic='reduce_oversized_position',currency='USD',severity='warning',title='Reduce our oversized USD position',
+                summary='Sell excess USD into CAD and JMD for upcoming payments. Both allocations preserve modeled cash and exposure limits.',
+                detail='The source position starts above its synthetic limit; live prices and delivery still need confirmation before trading.',
+                assumptions=[],finding_ids=[],fact_ids=[scenario['facts'][0]['id'],scenario['facts'][-2]['id']],rule_ids=[],
+                action_id=scenario['scenario_id'],expected_result='USD exposure falls below its simulated limit while the payment currencies are funded.')]))
+        out=generate_suggestions(model,(ROOT/'backend/prompts/fx_analyst.md').read_text(encoding='utf-8'),self.data,result,self.rules,'Validated',None)
+        self.assertEqual(reviewed,[])
+        self.assertEqual(out['suggestions'][0]['recommended_action']['kind'],'allocation_plan')
+        self.assertEqual(len(out['suggestions'][0]['recommended_action']['display_rows']),4)
 
     def test_chat_uses_new_tools_only_for_its_pinned_snapshot(self):
         saved=dict(id='saved',context=self.data,rules=self.rules,suggestions=[dict(id='selected',fact_ids=[])],**self.result())

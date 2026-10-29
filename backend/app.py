@@ -9,8 +9,9 @@ import threading
 import time
 import urllib.request
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -29,6 +30,8 @@ from .model_context import compact, compact_catalog, scenario_summary, model_jso
 from .calculation_cache import cached_evaluate
 from .simulation_inputs import SIMULATION_FILE, read_simulation
 from .fx_scenarios import scenario_tools
+from .reserve_transfer import reserve_transfer_tool
+from . import model_usage
 
 RUNTIME = ROOT/'runtime'
 RUNTIME.mkdir(exist_ok=True)
@@ -51,11 +54,26 @@ def update(**values):
         STATE.update(values)
         STATE['revision'] += 1
 
+@contextmanager
 def database():
     db = sqlite3.connect(RUNTIME/'audit.sqlite')
-    db.execute('CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, created TEXT, payload TEXT)')
-    db.execute('CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY, run_id TEXT, suggestion_id TEXT, role TEXT, content TEXT)')
-    return db
+    try:
+        with db:
+            db.execute('CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, created TEXT, payload TEXT)')
+            db.execute('CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY, run_id TEXT, suggestion_id TEXT, role TEXT, content TEXT)')
+            model_usage.initialize(db)
+            yield db
+    finally:
+        db.close()
+
+def log_model_usage(run_id,stage,model,usage=None,error_type=None):
+    if not run_id:
+        return
+    try:
+        with database() as db:
+            model_usage.record(db,run_id=run_id,stage=stage,model=model,usage=usage,error_type=error_type)
+    except Exception:
+        logging.exception('Could not save model usage; analyst response is unaffected')
 
 def read_context(folder,include_simulation=True):
     data = {}
@@ -131,10 +149,12 @@ def key():
         value = (ROOT/'apikey.txt').read_text().strip()
     return value
 
-def ask_model(system, content, tool_values=None, *, tool_handlers=None, response_schema=None, required_tools=None, trace=None, max_tokens=1400, model=None, trace_stage=None, stop_after_required_tools=False):
+def ask_model(system, content, tool_values=None, *, tool_handlers=None, response_schema=None, required_tools=None, trace=None, max_tokens=1400, model=None, trace_stage=None, stop_after_required_tools=False, usage_run_id=None, usage_stage=None):
     if not key():
         raise RuntimeError('No model key')
     body = {'model':model or os.getenv('OPENAI_MODEL','gpt-4.1-mini'),'messages':[{'role':'system','content':system+'\n'+TABLE_GUIDE},{'role':'user','content':wire_content(content)}], 'max_tokens':max_tokens}
+    title=(response_schema or {}).get('title')
+    stage=usage_stage or trace_stage or {'AnalystOutput':'suggestion_writer','EvidenceReview':'factual_review'}.get(title,'other')
     if response_schema:
         body['response_format']={'type':'json_schema','json_schema':{'name':'treasury_analyst_output','strict':True,'schema':response_schema}}
     needed=set(required_tools or [])
@@ -149,8 +169,14 @@ def ask_model(system, content, tool_values=None, *, tool_handlers=None, response
         if missing:
             body['tool_choice']={'type':'function','function':{'name':sorted(missing)[0]}}
         req = urllib.request.Request('https://api.openai.com/v1/chat/completions',data=json.dumps(body).encode(),headers={'Authorization':f'Bearer {key()}','Content-Type':'application/json'})
-        with urllib.request.urlopen(req,timeout=40) as response:
-            message = json.load(response)['choices'][0]['message']
+        try:
+            with urllib.request.urlopen(req,timeout=40) as response:
+                payload=json.load(response)
+        except Exception as exc:
+            log_model_usage(usage_run_id,stage,body['model'],error_type=type(exc).__name__)
+            raise
+        log_model_usage(usage_run_id,stage,body['model'],usage=payload.get('usage'))
+        message = payload['choices'][0]['message']
         if not message.get('tool_calls'):
             if missing:
                 raise ValueError('Required evidence tools were not called')
@@ -204,7 +230,7 @@ def process(event):
     prompt=prompt_file.read_text(encoding='utf-8') if prompt_file.exists() else PROMPT_PATH.read_text(encoding='utf-8')
     with LOCK:
         previous=STATE['analysis']
-    authored=generate_suggestions(ask_model,prompt,data,result,rules,handoff,previous,progress=lambda message:update(stage='analysing',message=message))
+    authored=generate_suggestions(partial(ask_model,usage_run_id=event['id']),prompt,data,result,rules,handoff,previous,progress=lambda message:update(stage='analysing',message=message))
     result.update(authored)
     result.update(id=event['id'],created=datetime.now().isoformat(),rules=rules,context=data,handoff=handoff,standardizer_mode='Python validation',calculation_cache_hit=cache_hit,change=event['change'],analyst_model=os.getenv('FX_ANALYST_MODEL','gpt-4.1'))
     (folder/'analysis.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
@@ -212,7 +238,7 @@ def process(event):
         db.execute('INSERT OR REPLACE INTO runs VALUES (?,?,?)',(result['id'],result['created'],json.dumps(result)))
     with LOCK:
         runs = ([{'id':result['id'],'created':result['created'],'change':event['change'],'count':len(result['findings'])}]+STATE['runs'])[:20]
-    update(stage='ready',message=('Analysis updated · POC review warnings' if result.get('validation_warnings') else 'Analysis is up to date') if result['suggestion_origin']=='analyst' else 'Calculations updated · analyst suggestions unavailable',analysis=result,runs=runs,ai_mode=result['ai_mode'])
+    update(stage='ready',message=('Analysis updated · POC review warnings' if result.get('validation_warnings') else 'Analysis is up to date') if result['suggestion_origin']=='analyst' else 'Latest analyst response failed validation · no suggestions published for this run',analysis=result,runs=runs,ai_mode=result['ai_mode'])
 
 def worker():
     while not STOP.is_set():
@@ -335,7 +361,8 @@ async def lifespan(app):
         update(analysis=results[0],runs=[dict(id=r['id'],created=r['created'],change=r['change'],count=len(r['findings'])) for r in results])
     try:
         initialize_inputs()
-        update(stage='ready',message='Saved analysis restored · no new analysis started' if rows else 'Ready · select Run analyst',active_run_id=None)
+        failed_latest=bool(rows and results[0].get('suggestion_origin')=='unavailable')
+        update(stage='ready',message='Latest analyst response failed validation · no suggestions published for this run' if failed_latest else 'Saved analysis restored · no new analysis started' if rows else 'Ready · select Run analyst',active_run_id=None)
     except Exception:
         update(stage='error',message='Waiting for valid, stable workbook inputs. No analysis started.')
     threads = [threading.Thread(target=worker,daemon=True),threading.Thread(target=watcher,daemon=True)]
@@ -389,6 +416,11 @@ def run(run_id:str):
         raise HTTPException(404,'Analysis not found')
     return json.loads(row[0])
 
+@app.get('/api/usage')
+def usage():
+    with database() as db:
+        return model_usage.report(db)
+
 class Chat(BaseModel):
     run_id:str
     suggestion_id:str
@@ -417,6 +449,7 @@ def chat(body:Chat):
             latest=STATE['analysis']
         handlers={'simulate_fx_conversion':dict(description='Compute an illustrative conversion, cash-buffer impact and exposure; no execution.',parameters={'type':'object','properties':{'source':{'type':'string','enum':list(CURRENCIES)},'target':{'type':'string','enum':list(CURRENCIES)},'amount':{'type':'number','exclusiveMinimum':0}},'required':['source','target','amount'],'additionalProperties':False},handler=lambda **args:simulate_conversion(analysis['context'],analysis,analysis['rules'],catalog,**args))}
         handlers['assess_funding_plan']=funding_plan_tool(analysis['context'],analysis,analysis['rules'],catalog)
+        handlers['assess_reserve_transfer']=reserve_transfer_tool(analysis['context'],analysis,analysis['rules'],catalog)
         handlers.update(scenario_tools(analysis['context'],analysis,analysis['rules'],catalog))
         for spec in handlers.values():
             if 'handler' in spec:spec['handler']=cached_handler(spec['handler'])
@@ -424,7 +457,7 @@ def chat(body:Chat):
         cited={id:catalog[id] for id in suggestion.get('fact_ids',[])+action_facts if id in catalog}
         content={'suggestion':suggestion,'facts':compact_catalog(cited),'positions':analysis.get('positions',[]),'policy':analysis['rules'],'snapshot_id':analysis['id'],'newer_snapshot_available':bool(latest and latest['id']!=analysis['id']),'history':messages,'question':body.message}
         tools={'read_treasury_context':('Read this suggestion’s original workbook snapshot, including simulation terms and order IDs.',analysis['context']),'get_demo_policy':('Read the demo-rule version used in this suggestion.',analysis['rules']),'evaluate_treasury_limits':('Read immutable calculated positions, forecasts and findings.',{k:analysis[k] for k in ('positions','forecast','findings','exposure_pct','metrics') if k in analysis}),'get_evidence_catalog':('Read supported fact IDs, values, units and rules; provenance stays local.',catalog)}
-        answer=ask_model(prompt,model_json(content),tools,tool_handlers=handlers,required_tools=set(),max_tokens=800,model=os.getenv('FX_ANALYST_MODEL','gpt-4.1'))
+        answer=ask_model(prompt,model_json(content),tools,tool_handlers=handlers,required_tools=set(),max_tokens=800,model=os.getenv('FX_ANALYST_MODEL','gpt-4.1'),usage_run_id=body.run_id,usage_stage='chat')
         mode='Live AI'
     except Exception as exc:
         # Do not log provider bodies, prompts, workbook data or credentials.

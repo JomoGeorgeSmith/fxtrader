@@ -146,7 +146,7 @@ class EfficiencyTests(unittest.TestCase):
         self.assertIn('error',trace[0]['result'])
         self.assertEqual(trace[1]['result'],{'computed':100})
 
-    def test_simple_funding_run_uses_three_requests_and_publishes_failed_assessment_as_risk(self):
+    def test_simple_funding_run_uses_two_requests_and_publishes_failed_assessment_as_risk(self):
         requests=[]
         body=dict(brief='Dollar funding remains a risk under the recorded forecast.',suggestions=[dict(
             topic='funding',currency='USD',severity='critical',title='Resolve the dollar funding gap',
@@ -178,7 +178,7 @@ class EfficiencyTests(unittest.TestCase):
             return Response(dict(role='assistant',content=json.dumps(dict(valid=True,errors=[]))))
         with patch.object(app,'key',return_value='fake'),patch('backend.app.urllib.request.urlopen',side_effect=provider):
             output=generate_suggestions(app.ask_model,(ROOT/'backend/prompts/fx_analyst.md').read_text(encoding='utf-8'),self.data,self.result,self.rules,'Python validation',None)
-        self.assertEqual(len(requests),3)
+        self.assertEqual(len(requests),2)
         self.assertEqual(output['suggestion_origin'],'analyst')
         self.assertEqual(output['suggestions'][0]['severity'],'critical')
         self.assertFalse(output['analyst_audit']['assessment_memo'])
@@ -197,7 +197,7 @@ class EfficiencyTests(unittest.TestCase):
             return json.dumps(dict(valid=True,errors=[]))
         self.assertTrue(review_suggestions(reviewer,'same-model','Review current funding.',[card],self.result,self.catalog,self.rules,[]).valid)
 
-    def test_without_shortfalls_only_writer_and_review_are_called(self):
+    def test_without_shortfalls_only_writer_is_called(self):
         result=copy.deepcopy(self.result)
         result['findings']=[]
         for p in result['positions']:
@@ -209,7 +209,7 @@ class EfficiencyTests(unittest.TestCase):
             return json.dumps(dict(valid=True,errors=[]))
         output=generate_suggestions(model,'Instructions',self.data,result,self.rules,'Python handoff',None)
         self.assertEqual(output['suggestion_origin'],'analyst')
-        self.assertEqual(calls,['AnalystOutput','EvidenceReview'])
+        self.assertEqual(calls,['AnalystOutput'])
 
     def test_standardization_uses_no_model(self):
         with patch.object(app,'ask_model') as model:
@@ -272,6 +272,22 @@ class EfficiencyTests(unittest.TestCase):
             async with app.lifespan(app.app):
                 self.assertEqual(app.STATE['analysis']['id'],'saved')
                 self.assertEqual(app.STATE['stage'],'ready')
+                self.assertIsNone(app.STATE['active_run_id'])
+        with patch.object(app,'STATE',dict(app.STATE)),patch.object(app,'STOP',threading.Event()),patch.object(app,'seed'),patch.object(app,'database',return_value=nullcontext(db)),patch.object(app,'initialize_inputs'),patch.object(app.threading,'Thread'),patch.object(app,'queue_analysis') as queue,patch.object(app,'ask_model') as model:
+            asyncio.run(start_stop())
+        queue.assert_not_called();model.assert_not_called()
+
+    def test_startup_shows_latest_failure_instead_of_stale_cards(self):
+        saved=dict(id='good',created=self.now.isoformat(),change='Saved analysis',findings=[],suggestions=[dict(title='CAD shortfall',recommended_action=dict(buy=dict(currency='CAD',amount='1050000.00')))],suggestion_origin='analyst',ai_mode='Live AI')
+        failed=dict(id='failed',created=self.now.isoformat(),change='Manual analyst run',findings=[],suggestions=[],suggestion_origin='unavailable',ai_mode='Analyst unavailable')
+        db=Mock();db.execute.return_value.fetchall.return_value=[(json.dumps(failed),),(json.dumps(saved),)]
+        async def start_stop():
+            async with app.lifespan(app.app):
+                self.assertEqual(app.STATE['analysis']['id'],'failed')
+                self.assertEqual(app.STATE['analysis']['suggestions'],[])
+                self.assertEqual(app.STATE['stage'],'ready')
+                self.assertIn('failed validation',app.STATE['message'])
+                self.assertEqual(app.STATE['runs'][0]['id'],'failed')
                 self.assertIsNone(app.STATE['active_run_id'])
         with patch.object(app,'STATE',dict(app.STATE)),patch.object(app,'STOP',threading.Event()),patch.object(app,'seed'),patch.object(app,'database',return_value=nullcontext(db)),patch.object(app,'initialize_inputs'),patch.object(app.threading,'Thread'),patch.object(app,'queue_analysis') as queue,patch.object(app,'ask_model') as model:
             asyncio.run(start_stop())
