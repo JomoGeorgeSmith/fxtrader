@@ -32,6 +32,9 @@ from .simulation_inputs import SIMULATION_FILE, read_simulation
 from .fx_scenarios import scenario_tools
 from .reserve_transfer import reserve_transfer_tool
 from . import model_usage
+from .treasury_context import normalized_state
+from .portfolio_scenario import portfolio_scenario_tool
+from .build_identity import code_identity,WORKFLOW_VERSION
 
 RUNTIME = ROOT/'runtime'
 RUNTIME.mkdir(exist_ok=True)
@@ -43,6 +46,7 @@ LOCK = threading.RLock()
 RUN_LOCK = threading.Lock()
 STOP = threading.Event()
 BOOT_ID = uuid.uuid4().hex
+BOOT_CODE_IDENTITY = code_identity()
 LAST_INPUT_HASH = None
 WATCH_SIGNATURE = None
 FILES = ['Bank_Balances.xlsx','Daily_Rate_Sheet.xlsx','Weekly_Disbursements.xlsx',SIMULATION_FILE]
@@ -149,7 +153,7 @@ def key():
         value = (ROOT/'apikey.txt').read_text().strip()
     return value
 
-def ask_model(system, content, tool_values=None, *, tool_handlers=None, response_schema=None, required_tools=None, trace=None, max_tokens=1400, model=None, trace_stage=None, stop_after_required_tools=False, usage_run_id=None, usage_stage=None):
+def ask_model(system, content, tool_values=None, *, tool_handlers=None, response_schema=None, required_tools=None, trace=None, max_tokens=1400, model=None, trace_stage=None, stop_after_required_tools=False, usage_run_id=None, usage_stage=None, initial_tool=None, max_turns=8, completion_check=None):
     if not key():
         raise RuntimeError('No model key')
     body = {'model':model or os.getenv('OPENAI_MODEL','gpt-4.1-mini'),'messages':[{'role':'system','content':system+'\n'+TABLE_GUIDE},{'role':'user','content':wire_content(content)}], 'max_tokens':max_tokens}
@@ -164,11 +168,24 @@ def ask_model(system, content, tool_values=None, *, tool_handlers=None, response
         body['tool_choice'] = 'required' if required_tools is None else 'auto'
     if tool_handlers:
         body.setdefault('tools',[]).extend({'type':'function','function':{'name':name,'description':spec['description'],'parameters':spec['parameters'],'strict':True}} for name,spec in tool_handlers.items())
-    for turn in range(8):
+    if initial_tool:
+        if not tool_handlers or initial_tool not in tool_handlers:
+            raise ValueError('Initial investigation tool is unavailable')
+        body['tool_choice']={'type':'function','function':{'name':initial_tool}}
+    all_tools=list(body.get('tools',[]))
+    first_investigation=False
+    for turn in range(max_turns):
         missing=needed-called
-        if missing:
+        if missing and not (turn==0 and initial_tool):
             body['tool_choice']={'type':'function','function':{'name':sorted(missing)[0]}}
-        req = urllib.request.Request('https://api.openai.com/v1/chat/completions',data=json.dumps(body).encode(),headers={'Authorization':f'Bearer {key()}','Content-Type':'application/json'})
+        request_body=json.dumps(body).encode()
+        if os.getenv('FX_CAPTURE_MODEL_PAYLOADS')=='1' and usage_run_id:
+            # Exact UTF-8 request BODY bytes, before transmission. The API key
+            # lives in an HTTP header and is deliberately never persisted.
+            captures=RUNTIME/'model-payloads'/usage_run_id
+            captures.mkdir(parents=True,exist_ok=True)
+            (captures/f'{stage}-{turn+1:02}.txt').write_bytes(request_body)
+        req = urllib.request.Request('https://api.openai.com/v1/chat/completions',data=request_body,headers={'Authorization':f'Bearer {key()}','Content-Type':'application/json'})
         try:
             with urllib.request.urlopen(req,timeout=40) as response:
                 payload=json.load(response)
@@ -178,10 +195,19 @@ def ask_model(system, content, tool_values=None, *, tool_handlers=None, response
         log_model_usage(usage_run_id,stage,body['model'],usage=payload.get('usage'))
         message = payload['choices'][0]['message']
         if not message.get('tool_calls'):
+            if initial_tool and initial_tool not in called:
+                raise ValueError('Initial portfolio scan was not completed')
             if missing:
                 raise ValueError('Required evidence tools were not called')
             if message.get('refusal'):
                 raise ValueError('The model declined the analysis')
+            if completion_check:
+                incomplete=completion_check(message.get('content') or '')
+                if incomplete:
+                    body['messages'].append(message)
+                    body['messages'].append({'role':'user','content':incomplete[:1800]})
+                    body['tool_choice']='auto' if turn<max_turns-2 else 'none'
+                    continue
             return message.get('content') or 'No additional explanation was returned.'
         body['messages'].append(message)
         for call in message['tool_calls']:
@@ -205,11 +231,29 @@ def ask_model(system, content, tool_values=None, *, tool_handlers=None, response
                 trace.append(dict(name=name,arguments=arguments,result=json.loads(json.dumps(value)),call_id=call['id'],stage=trace_stage))
             visible=compact_catalog(value) if name=='get_evidence_catalog' and isinstance(value,dict) else scenario_summary(value) if name.startswith('assess_') or name=='simulate_fx_conversion' else compact(value)
             body['messages'].append({'role':'tool','tool_call_id':call['id'],'content':wire_json(visible)})
+            if name==initial_tool and isinstance(arguments.get('observations'),list):
+                first_investigation=any(isinstance(note,dict) and note.get('decision')=='test' for note in arguments['observations'])
         if stop_after_required_tools and needed and needed<=called:
             # The writer receives the full calculations and performs judgment.
             # Do not buy another response just to narrate an unused tool memo.
             return ''
-        body['tool_choice'] = 'none' if turn>=6 else 'auto'
+        if first_investigation:
+            # A self-reported intention to test should lead to an actual tool
+            # interaction, not immediately to prose. The model chooses ANY
+            # available calculation; no currency, scenario or card is selected.
+            candidates=[tool for tool in all_tools if tool['function']['name'].startswith('assess_')
+                or tool['function']['name']=='simulate_fx_conversion']
+            if candidates:
+                body['tools']=candidates
+                body['tool_choice']='required'
+            else:first_investigation=False
+        else:
+            body['tools']=all_tools
+            body['tool_choice'] = 'none' if turn>=max_turns-2 else 'auto'
+        if first_investigation and any(call['function']['name'].startswith('assess_') or call['function']['name']=='simulate_fx_conversion' for call in message['tool_calls']):
+            first_investigation=False
+            body['tools']=all_tools
+            body['tool_choice']='auto'
     raise RuntimeError('Agent tool-call budget exhausted')
 
 def standardize(data):
@@ -232,7 +276,9 @@ def process(event):
         previous=STATE['analysis']
     authored=generate_suggestions(partial(ask_model,usage_run_id=event['id']),prompt,data,result,rules,handoff,previous,progress=lambda message:update(stage='analysing',message=message))
     result.update(authored)
-    result.update(id=event['id'],created=datetime.now().isoformat(),rules=rules,context=data,handoff=handoff,standardizer_mode='Python validation',calculation_cache_hit=cache_hit,change=event['change'],analyst_model=os.getenv('FX_ANALYST_MODEL','gpt-4.1'))
+    result.update(id=event['id'],created=datetime.now().isoformat(),rules=rules,context=data,handoff=handoff,standardizer_mode='Python validation',calculation_cache_hit=cache_hit,change=event['change'],analyst_model=os.getenv('FX_ANALYST_MODEL','gpt-4.1'),
+        workflow_version=WORKFLOW_VERSION,build_identity=BOOT_CODE_IDENTITY,input_hash=event['hash'],model_request_capture_enabled=os.getenv('FX_CAPTURE_MODEL_PAYLOADS')=='1')
+    result['canonical_state']=normalized_state(data,result,rules,event['id'])
     (folder/'analysis.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
     with database() as db:
         db.execute('INSERT OR REPLACE INTO runs VALUES (?,?,?)',(result['id'],result['created'],json.dumps(result)))
@@ -289,6 +335,8 @@ def initialize_inputs():
 def queue_analysis(change,*,automatic=False,expected_signature=None):
     global LAST_INPUT_HASH
     with RUN_LOCK:
+        if code_identity()['code_hash_sha256']!=BOOT_CODE_IDENTITY['code_hash_sha256']:
+            raise ValueError('Backend source changed after API boot. Restart before running analyst; no job queued.')
         with LOCK:
             active=STATE.get('active_run_id')
         if active and not automatic:
@@ -311,7 +359,8 @@ def queue_analysis(change,*,automatic=False,expected_signature=None):
         (folder/'fx_analyst.md').write_text(prompt_text,encoding='utf-8')
         if signatures()!=signature or digest(read_context(folder))!=digest(data):
             raise ValueError('Inputs changed while snapshotting; no analysis was queued')
-        event=dict(id=run_id,hash=content_hash,change=change,session=BOOT_ID)
+        event=dict(id=run_id,hash=content_hash,change=change,session=BOOT_ID,workflow_version=WORKFLOW_VERSION,
+            code_hash_sha256=BOOT_CODE_IDENTITY['code_hash_sha256'])
         producer=None
         try:
             producer=KafkaProducer(bootstrap_servers='localhost:9092',value_serializer=lambda v:json.dumps(v).encode(),retries=0,request_timeout_ms=10000,max_block_ms=10000)
@@ -375,7 +424,9 @@ app = FastAPI(title='JN Treasury FX Analyst — synthetic POC',lifespan=lifespan
 
 @app.get('/health')
 def health():
-    return {'status':'ok','kafka':STATE['kafka'],'stage':STATE['stage']}
+    return {'status':'ok','kafka':STATE['kafka'],'stage':STATE['stage'],
+        'workflow_version':WORKFLOW_VERSION,'code_hash_sha256':BOOT_CODE_IDENTITY['code_hash_sha256'],
+        'model_request_capture_enabled':os.getenv('FX_CAPTURE_MODEL_PAYLOADS')=='1'}
 
 @app.get('/api/state')
 def state():
@@ -451,6 +502,7 @@ def chat(body:Chat):
         handlers['assess_funding_plan']=funding_plan_tool(analysis['context'],analysis,analysis['rules'],catalog)
         handlers['assess_reserve_transfer']=reserve_transfer_tool(analysis['context'],analysis,analysis['rules'],catalog)
         handlers.update(scenario_tools(analysis['context'],analysis,analysis['rules'],catalog))
+        handlers['evaluate_portfolio_scenario']=portfolio_scenario_tool(analysis['context'],analysis,analysis['rules'],catalog)
         for spec in handlers.values():
             if 'handler' in spec:spec['handler']=cached_handler(spec['handler'])
         action_facts=(suggestion.get('recommended_action') or {}).get('fact_ids',[])

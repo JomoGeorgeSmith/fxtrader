@@ -61,6 +61,16 @@ def evaluate(data, rules, now=None):
         add('fx-exposure','warning','FX exposure is above the demo limit',f'Aggregate absolute exposure is {pct:.1f}% of capital; the demo limit is {rules["max_absolute_fx_exposure_pct"]}%.',
             f'Sum of absolute currency exposures translated at sheet selling rates: {money(exposure,"JMD")}. Capital: {money(capital,"JMD")}. This simplified gross measure is not regulatory NOP. Review exposure-reduction options with Treasury.',
             'max_absolute_fx_exposure_pct',[r['_source'] for r in data['risk']+data['rates']])
+    for limit in data.get('fx_limits',[]):
+        currency=limit['currency']
+        risk=next((r for r in data['risk'] if r['currency']==currency),None)
+        if risk is None:continue
+        excess=abs(dec(risk['net_fx_exposure']))-dec(limit['max_absolute_exposure'])
+        if excess>0:
+            add(f'fx-exposure-{currency}','warning',f'{currency} position exceeds its synthetic limit',
+                f'The recorded net {currency} position is {money(dec(risk["net_fx_exposure"]),currency)} (absolute size {money(abs(dec(risk["net_fx_exposure"])),currency)}), {money(excess,currency)} above the synthetic limit of {money(dec(limit["max_absolute_exposure"]),currency)}.',
+                'The position comes from Risk_Inputs, not the operating account balance. Reconcile assets and offsets, then assess any reduction against cash cushions, other currency needs, timing and the aggregate demo limit. No trade is selected by this finding.',
+                'fx_limits',[risk['_source'],limit['_source']],currency)
     for currency, rate in rates.items():
         age = (now-datetime.fromisoformat(str(rate['as_of']))).total_seconds()/3600
         change = (dec(rate['sell'])/dec(rate['previous_sell'])-1)*100

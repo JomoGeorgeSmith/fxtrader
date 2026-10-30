@@ -82,9 +82,19 @@ def ledger_events(data):
 def exposure_check(data,rules,changes):
     exposures={r['currency']:D(r['net_fx_exposure'])+D(changes.get(r['currency'],0)) for r in data['risk']}
     limits={r['currency']:D(r['max_absolute_exposure']) for r in data.get('fx_limits',[])}
+    before={r['currency']:D(r['net_fx_exposure']) for r in data['risk']}
+    capital=D(data['risk'][0]['capital_base_jmd'])
+    ceiling=D(rules['max_absolute_fx_exposure_pct'])
+    previous_pct=sum((abs(amount*price(data,c)) for c,amount in before.items()),D(0))/capital*100
     pct=sum((abs(amount*price(data,c)) for c,amount in exposures.items()),D(0))/D(data['risk'][0]['capital_base_jmd'])*100
     return dict(exposure_pct=float(pct),aggregate_within_limit=pct<=D(rules['max_absolute_fx_exposure_pct']),
         currency_exposures={c:float(v) for c,v in exposures.items()},currency_limits_preserved=all(abs(v)<=limits[c] for c,v in exposures.items() if c in limits),
+        previous_exposure_pct=float(previous_pct),aggregate_breach_before_pct=float(max(D(0),previous_pct-ceiling)),
+        aggregate_breach_after_pct=float(max(D(0),pct-ceiling)),
+        currency_breaches_before={c:float(max(D(0),abs(v)-limits[c])) for c,v in before.items() if c in limits},
+        currency_breaches_after={c:float(max(D(0),abs(v)-limits[c])) for c,v in exposures.items() if c in limits},
+        no_exposure_breach_worsened=(max(D(0),pct-ceiling)<=max(D(0),previous_pct-ceiling)
+            and all(max(D(0),abs(v)-limits[c])<=max(D(0),abs(before[c])-limits[c]) for c,v in exposures.items() if c in limits)),
         note='Current Risk_Inputs plus this independent scenario; not a full dated regulatory risk position.')
 
 

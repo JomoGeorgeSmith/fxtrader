@@ -34,7 +34,10 @@ def funding_tasks(data, result):
     return tasks
 
 
-def run_orchestrator(*,ask,prompt,data,result,rules,handoff,previous,tools,handlers,trace,model,write,progress=None):
+def run_orchestrator(*,ask,prompt,data,result,rules,handoff,previous,tools,handlers,trace,model,write,progress=None,candidate_driven=False):
+    if candidate_driven:
+        if progress:progress('Investigating portfolio candidates and alternatives')
+        return write(dict(funding_tasks=[],assessments=[],warnings=[]))
     tasks=funding_tasks(data,result)
     # All validated values remain available, without repeated row provenance.
     dates=sorted({r['date'] for r in result['forecast']})

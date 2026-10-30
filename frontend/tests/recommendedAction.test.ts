@@ -6,6 +6,15 @@ import {newSuggestionSounds} from '../src/sounds.ts';
 const action:RecommendedAction={assessment_id:'plan.example',buy:{currency:'USD',amount:'1050000.00'},
  sell:{currency:'GBP',amount:'825749.34'},reference_rate:{source:'GBP',target:'USD',target_per_source:'1.271572327'},rate_basis:'treasury_sheet'};
 
+test('shared portfolio cancellation stays visibly conditional',()=>{
+ const scenario:ScenarioAction={assessment_id:'portfolio.example',kind:'portfolio_change',rate_basis:'not_applicable',display_rows:[
+  {label:'Proposed change (Treasury approval required)',value:'cancel order TEST-ORDER'},
+  {label:'Modeled avoided cost, not profit',value:'JMD 76,030.75'}]};
+ assert.equal(actionRows(scenario)?.length,2);
+ assert.match(timingNote(scenario)!,/Treasury must confirm approvals/);
+ assert.equal(actionRows({...scenario,rate_basis:'treasury_sheet'}),null);
+});
+
 test('buy, sell and directional sheet rate are digestible without date or fees',()=>{
  assert.deepEqual(actionRows(action),[
   {label:'Buy',value:'US$1,050,000'},

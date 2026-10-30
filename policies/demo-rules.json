@@ -7,7 +7,6 @@
   "rate_max_age_hours": 24,
   "unusual_rate_move_pct": 2,
   "forecast_days": 28,
-  "max_suggestions": 5,
   "liquidity_metrics": {
     "lcr": {"normal_min_pct": 100, "good_min_pct": 120, "inflow_cap_pct": 75},
     "nsfr": {"normal_min_pct": 100, "good_min_pct": 120}

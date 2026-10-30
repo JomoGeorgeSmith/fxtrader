@@ -90,7 +90,8 @@ def assess_funding_plan(data,result,rules,catalog,source,obligation_id,target_am
     changes={source:-debit,target:amount}
     capital=Decimal(str(data['risk'][0]['capital_base_jmd']))
     pct=sum((abs((Decimal(str(r['net_fx_exposure']))+changes.get(r['currency'],Decimal(0)))*Decimal(str(rates[r['currency']]['sell']))) for r in data['risk']),Decimal(0))/capital*100
-    exposure_ok=pct<=Decimal(str(rules['max_absolute_fx_exposure_pct']))
+    risk=exposure_check(data,rules,changes)
+    exposure_ok=risk['no_exposure_breach_worsened'] if data.get('fx_terms') else pct<=Decimal(str(rules['max_absolute_fx_exposure_pct']))
     on_time=settlement<=due
     key=json.dumps([source,obligation_id,str(amount),settlement,str(fee),expected_receipt_delay_days])
     prefix='plan.'+hashlib.sha256(key.encode()).hexdigest()[:12]
@@ -122,10 +123,9 @@ def assess_funding_plan(data,result,rules,catalog,source,obligation_id,target_am
         cash=project(data,result,rules,[(settlement,source,-debit),(settlement,target,amount),(settlement,'JMD',-cost)],{source,target,'JMD'},expected_receipt_delay_days)
         simulated_timing=settlement_check(data,source,target,settlement,dates[0])
         timing['simulation']=simulated_timing
-        risk=exposure_check(data,rules,changes)
         simulation_checks=dict(source_account_capacity=debit+(cost if source=='JMD' else 0)<=source_capacity(data,source,settlement),
             fee_account_capacity=cost+(debit if source=='JMD' else 0)<=source_capacity(data,'JMD',settlement),
-            currency_limits_preserved=risk['currency_limits_preserved'],
+            currency_limits_preserved=risk['no_exposure_breach_worsened'],
             simulated_settlement_ready=simulated_timing['lead_time_satisfied'] and simulated_timing['arrival_is_business_day'])
         fact('simulation_fee_jmd','Additional simulated JMD fee from Currency_Terms; supplied source fee is separate',float(cost),'money','JMD')
         for mode,scenario in scenarios.items():
@@ -133,7 +133,7 @@ def assess_funding_plan(data,result,rules,catalog,source,obligation_id,target_am
             scenario['passes_modeled_checks']=scenario['passes_modeled_checks'] and cash[mode]['passes_cash_checks'] and all(simulation_checks.values())
     return dict(plan_id=prefix,source=source,target=target,obligation_id=obligation_id,obligation_status=obligation['status'],
         requested_target_amount=float(amount),source_principal=float(principal),total_source_debit=float(debit),
-        settlement_date=settlement,obligation_date=due,settles_by_obligation=on_time,exposure_pct=float(pct),exposure_within_demo_limit=exposure_ok,sheet_rate=str(reference_rate),
+        settlement_date=settlement,obligation_date=due,settles_by_obligation=on_time,exposure_pct=float(pct),exposure_within_demo_limit=risk['aggregate_within_limit'],risk=risk,sheet_rate=str(reference_rate),
         scenarios=scenarios,timing=timing,facts=facts,simulation_checks=simulation_checks,
         assumptions=['Hypothetical assessment only: no execution, approval, profitability or optimal timing claim.',
             'Uses current bank-perspective sheet bid/ask rates even for future settlement; NOT a forward quote or executable offer.',

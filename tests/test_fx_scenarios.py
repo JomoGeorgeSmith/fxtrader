@@ -173,13 +173,13 @@ class FXScenarioTests(unittest.TestCase):
         failed=assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',legs)
         self.assertFalse(failed['scenarios']['baseline']['cash_cushions_preserved'])
 
-    def test_combined_sale_must_really_resolve_currency_exposure_limit(self):
+    def test_combined_sale_can_improve_breach_without_claiming_to_resolve_it(self):
         legs=self.allocation_fixture()
         legs[0]['target_amount']=1000;legs[1]['target_amount']=1000
         r=assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',legs)
-        self.assertFalse(r['checks']['exposure_preserved'])
-        self.assertFalse(r['passes_modeled_checks'])
-        self.assertIsNone(recommended_action(r['scenario_id'],[dict(name='assess_allocation_plan',result=r)],self.data)[0])
+        self.assertTrue(r['checks']['exposure_preserved'])
+        self.assertGreater(r['risk']['currency_breaches_after']['USD'],0)
+        self.assertLess(r['risk']['currency_breaches_after']['USD'],r['risk']['currency_breaches_before']['USD'])
 
     def test_combined_sale_rejects_invented_or_duplicate_payment_cover(self):
         legs=self.allocation_fixture()
@@ -190,9 +190,10 @@ class FXScenarioTests(unittest.TestCase):
         self.data['fx_orders'].append(dict(id='PLANNED-CAD',status='Planned',obligation_id='TEST-CAD',_source='test'))
         self.assertFalse(assess_allocation_plan(self.data,self.result(),self.rules,self.catalog,'USD',legs)['checks']['no_duplicate_planned_cover'])
 
-    def test_currency_limit_breach_is_not_hidden_by_aggregate_headroom(self):
+    def test_preexisting_currency_breach_is_visible_without_forcing_full_cure(self):
         next(r for r in self.data['fx_limits'] if r['currency']=='USD')['max_absolute_exposure']=1
-        r=self.trade();self.assertFalse(r['checks']['exposure_preserved']);self.assertFalse(r['passes_modeled_checks'])
+        r=self.trade();self.assertFalse(r['checks']['exposure_preserved'])
+        self.assertGreater(r['risk']['currency_breaches_after']['USD'],r['risk']['currency_breaches_before']['USD'])
 
     def test_account_permission_and_daily_limit_are_enforced(self):
         p=next(r for r in self.data['fx_permissions'] if r['currency']=='GBP');p['fx_enabled']=False

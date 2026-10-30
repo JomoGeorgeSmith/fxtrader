@@ -213,7 +213,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertIn('error',self.trace[0]['result'])
         self.assertEqual(self.trace[1]['result'],{'computed':1000})
 
-    def test_graph_results_reach_writer_as_compact_evidence(self):
+    def test_candidate_results_reach_writer_without_pre_routed_funding(self):
         writes=[]
         def ask(prompt,content,tools=None,**kwargs):
             schema=kwargs.get('response_schema',{}).get('title')
@@ -221,17 +221,16 @@ class OrchestratorTests(unittest.TestCase):
             if schema=='EvidenceReview':return json.dumps({'valid':True,'errors':[]})
             payload=json.loads(content)
             writes.append(payload)
-            reports=payload['funding_assessments']
-            self.assertEqual(reports[0]['status'],'assessed')
-            self.assertIn('scenarios',reports[0]['calculations'][0]['result'])
-            self.assertNotIn('balances',reports[0]['calculations'][0]['result']['scenarios']['baseline'])
-            self.assertNotIn('memo',reports[0])
-            fact=next(id for id in payload['evidence_catalog'] if id.startswith('plan.'))
+            self.assertEqual(payload['funding_assessments'],[])
+            self.assertTrue(payload['candidate_registry'])
+            self.assertTrue(payload['candidate_preflight'])
+            fact='USD.buffer_gap'
             return json.dumps(dict(brief='Funding options have been tested against the recorded forecast.',suggestions=[dict(topic='tested_funding',currency='USD',severity='critical',title='Assess the modeled funding trade-off',summary='The tested plan has constraints that must be resolved before proceeding.',detail='The calculation checks cash buffers and exposure. Treat its failed checks as constraints, not an approved trade.',assumptions=['No transaction has been executed.'],finding_ids=['liquidity-USD'],fact_ids=[fact],rule_ids=[])]))
         output=generate_suggestions(ask,self.prompt,self.data,self.result,self.rules,'Full context',None)
         self.assertEqual(output['suggestion_origin'],'analyst')
         self.assertEqual(len(writes),1)
-        self.assertEqual(output['analyst_audit']['orchestration']['assessments'][0]['status'],'assessed')
+        self.assertEqual(output['analyst_audit']['orchestration']['assessments'],[])
+        self.assertTrue(output['analyst_audit']['candidate_preflight'])
 
 
 if __name__=='__main__':unittest.main()

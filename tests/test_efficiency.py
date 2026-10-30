@@ -146,7 +146,7 @@ class EfficiencyTests(unittest.TestCase):
         self.assertIn('error',trace[0]['result'])
         self.assertEqual(trace[1]['result'],{'computed':100})
 
-    def test_simple_funding_run_uses_two_requests_and_publishes_failed_assessment_as_risk(self):
+    def test_candidate_driven_run_scans_before_publishing_risk(self):
         requests=[]
         body=dict(brief='Dollar funding remains a risk under the recorded forecast.',suggestions=[dict(
             topic='funding',currency='USD',severity='critical',title='Resolve the dollar funding gap',
@@ -162,17 +162,16 @@ class EfficiencyTests(unittest.TestCase):
             payload=json.loads(request.data);requests.append(payload)
             self.assertEqual(payload['model'],'gpt-4.1')
             title=payload.get('response_format',{}).get('json_schema',{}).get('schema',{}).get('title')
-            if not title:
-                self.assertEqual(len(requests),1)
-                args=dict(source='CAD',obligation_id='PAY-002',target_amount=1300000,
-                    settlement_date=self.result['forecast'][0]['date'],fee_source_amount=0,expected_receipt_delay_days=3)
-                return Response(dict(role='assistant',content=None,tool_calls=[dict(id='assessment',type='function',function=dict(name='assess_funding_plan',arguments=json.dumps(args)))]))
             if title=='AnalystOutput':
                 context=unpack_tables(json.loads(payload['messages'][1]['content']))
-                assessment=context['funding_assessments'][0]
-                self.assertNotIn('memo',assessment)
-                self.assertFalse(assessment['calculations'][0]['result']['scenarios']['baseline']['passes_modeled_checks'])
+                self.assertEqual(context['funding_assessments'],[])
+                self.assertTrue(context['candidate_registry'])
+                if len(requests)==1:
+                    self.assertEqual(payload['tool_choice']['function']['name'],'record_portfolio_scan')
+                    args=dict(observations=[dict(subject='cash gap',observed='Recorded USD gap',decision='set_aside',reason='No verified funding source yet')])
+                    return Response(dict(role='assistant',content=None,tool_calls=[dict(id='scan',type='function',function=dict(name='record_portfolio_scan',arguments=json.dumps(args)))]))
                 self.assertTrue(any(t['function']['name']=='assess_funding_plan' for t in payload['tools']))
+                body['candidate_dispositions']=[dict(candidate_id=c['id'],status='deferred',reason='Awaiting a verified funding source and executable quote.') for c in context['candidate_registry']]
                 return Response(dict(role='assistant',content=json.dumps(body)))
             self.assertEqual(title,'EvidenceReview')
             return Response(dict(role='assistant',content=json.dumps(dict(valid=True,errors=[]))))
@@ -231,6 +230,20 @@ class EfficiencyTests(unittest.TestCase):
             rules=copy.deepcopy(self.rules);rules['minimum_available']['USD']+=1
             self.assertFalse(cached_evaluate(self.data,rules,directory,self.now)[1])
             self.assertFalse(cached_evaluate(self.data,self.rules,directory,self.now+timedelta(days=1))[1])
+
+    def test_cache_does_not_reuse_result_from_stale_loaded_calculation_code(self):
+        # A stale server may have cached old findings against the NEW on-disk
+        # source hash. Runtime code identity must keep that key separate.
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('backend.calculation_cache.loaded_calculation_fingerprint',return_value='old-process'):
+                stale,hit=cached_evaluate(self.data,self.rules,directory,self.now)
+                self.assertFalse(hit)
+                stale['findings']=[]
+                next(Path(directory).glob('*.json')).write_text(json.dumps(stale),encoding='utf-8')
+            fresh,hit=cached_evaluate(self.data,self.rules,directory,self.now)
+            self.assertFalse(hit)
+            self.assertTrue(fresh['findings'])
+            self.assertTrue(cached_evaluate(self.data,self.rules,directory,self.now)[1])
 
     def test_calculation_cache_invalidates_on_quote_age_boundary(self):
         now=datetime(2026,10,28,8)

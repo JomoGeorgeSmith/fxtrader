@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.analyst import build_evidence, validate_output, generate_suggestions, simulate_conversion, material_liquidity_changes, EvidenceReview, attach_review_warnings
+from backend.analyst import build_evidence, validate_output, generate_suggestions, simulate_conversion, material_liquidity_changes, EvidenceReview, attach_review_warnings, analyst_schema
 from backend.app import read_context, ask_model
 from backend.calculations import evaluate
 from backend.seed import seed, ROOT
@@ -66,7 +66,7 @@ class AnalystTests(unittest.TestCase):
             if kwargs['response_schema']['title']=='AnalystOutput':
                 changes=json.loads(content)['material_liquidity_changes']
                 self.assertEqual(changes[0]['increase'],390000)
-                self.assertIn('Do not merely repeat a prior card',prompt)
+                self.assertIn('one next move',prompt)
                 calls.append('writer')
                 return json.dumps(self.response())
             return json.dumps({'valid':True,'errors':[]})
@@ -109,9 +109,8 @@ class AnalystTests(unittest.TestCase):
         def model(prompt,content,tools=None,**kwargs):
             title=kwargs['response_schema']['title'];calls.append(title)
             if title=='AnalystOutput':
-                self.assertIn('Writing voice: a helpful colleague',prompt)
-                self.assertIn('two or three short everyday sentences',prompt)
-                self.assertIn('Keep the real risks and conditions clear.',prompt)
+                self.assertIn('Return action-led, cited cards',prompt)
+                self.assertIn('conditional status and honest alternatives',prompt)
                 self.assertNotIn('Keep summaries to one short sentence',prompt)
                 return json.dumps(body)
             return json.dumps(dict(valid=True,errors=[]))
@@ -132,13 +131,9 @@ class AnalystTests(unittest.TestCase):
         def model(prompt,content,tools=None,**kwargs):
             title=kwargs['response_schema']['title'];calls.append(title)
             if title=='AnalystOutput':
-                self.assertIn('Decision value: an opportunity is not a status update',prompt)
-                self.assertIn('what to do, with how much, by when, and what benefit it provides',prompt)
-                self.assertIn('Put routine status observations in the snapshot brief',prompt)
-                self.assertIn('Important risk warnings can still be cards without a feasible trade.',prompt)
-                self.assertIn('not an extra review stage, completeness gate or automatic rewrite',prompt)
-                self.assertIn('Treasury reference rate',prompt)
-                self.assertIn('Writing voice: a helpful colleague',prompt)
+                self.assertIn('candidate_dispositions',prompt)
+                self.assertIn('Treasury reference quotes are not executable prices',prompt)
+                self.assertIn('Only Treasury can approve execution',prompt)
                 return json.dumps(self.response())
             return json.dumps(dict(valid=True,errors=[]))
         output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
@@ -194,6 +189,27 @@ class AnalystTests(unittest.TestCase):
                 self.assertEqual(output['analysis_review_warnings'],[])
                 self.assertEqual(output['suggestion_origin'],'analyst')
 
+    def test_failed_plan_retains_cash_risk_but_replaces_execute_next_move(self):
+        body=self.response()
+        body['suggestions'][0].update(action_id='plan.failed',
+            next_move='Ask Treasury to execute this USD sale by Friday.',
+            expected_result='This sale would cover the cash gap.')
+        def model(prompt,content,tools=None,**kwargs):
+            kwargs['trace'].append(dict(name='assess_funding_plan',result=dict(
+                plan_id='plan.failed',source='USD',target='CAD',source_principal=772446.61,
+                requested_target_amount=1050000,scenarios={'baseline':{'passes_modeled_checks':False}})))
+            return json.dumps(body)
+        output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
+        card=output['suggestions'][0]
+        self.assertEqual(output['suggestion_origin'],'analyst')
+        self.assertEqual(card['detail'],body['suggestions'][0]['detail'])
+        self.assertIsNone(card['recommended_action'])
+        self.assertIsNone(card['expected_result'])
+        self.assertIn('Do not execute this tested plan',card['next_move'])
+        self.assertIn('another funding source',card['next_move'])
+        self.assertNotIn('execute this USD sale',card['next_move'])
+        self.assertTrue(card['review_warnings'])
+
     def test_numeric_text_does_not_auto_attach_citations(self):
         body=self.response()
         body['suggestions'][0]['fact_ids'].remove('USD.first_breach')
@@ -241,14 +257,38 @@ class AnalystTests(unittest.TestCase):
         self.assertEqual(output['suggestions'][0]['summary'],body['suggestions'][0]['summary'])
         self.assertEqual(output['validation_warnings'],output['analyst_audit']['validation_warnings'])
 
-    def test_unknown_references_skip_only_the_affected_card(self):
+    def test_unknown_facts_skip_but_finding_and_rule_citations_warn(self):
         for field,value in [('fact_ids',['invented']),('finding_ids',['invented']),('rule_ids',['invented'])]:
             body=self.response()
             body['suggestions'][0][field]=value
             warnings=[]
             _,cards=validate_output(json.dumps(body),self.catalog,self.result,self.rules,warnings)
-            self.assertEqual(cards,[])
-            self.assertTrue(any('Skipped' in warning for warning in warnings))
+            if field=='fact_ids':
+                self.assertEqual(cards,[])
+                self.assertTrue(any('Skipped' in warning for warning in warnings))
+            else:
+                self.assertEqual(len(cards),1)
+                self.assertTrue(cards[0]['validation_warnings'])
+                self.assertTrue(warnings)
+
+    def test_unsupported_policy_citation_does_not_erase_a_tested_card(self):
+        body=self.response()
+        body['suggestions'][0]['rule_ids'].append('max_absolute_fx_exposure_pct')
+        warnings=[]
+        _,cards=validate_output(json.dumps(body),self.catalog,self.result,self.rules,warnings)
+        self.assertEqual(len(cards),1)
+        self.assertIn('minimum_available',cards[0]['rule'])
+        self.assertNotIn('max_absolute_fx_exposure_pct',cards[0]['rule'])
+        self.assertTrue(any('unverified rule reference' in w for w in warnings))
+        self.assertTrue(cards[0]['validation_warnings'])
+
+    def test_writer_does_not_replace_draft_to_fill_missing_dispositions(self):
+        def writer(*args,**kwargs):
+            self.assertIsNone(kwargs.get('completion_check'))
+            return json.dumps(self.response())
+        output=generate_suggestions(writer,self.prompt,self.data,self.result,self.rules,'Validated',None)
+        self.assertEqual(len(output['suggestions']),1)
+        self.assertTrue(all(c['status']=='deferred' for c in output['candidate_dispositions']))
 
     def test_unknown_fact_ids_do_not_publish_a_fabricated_card_or_retry(self):
         body=self.response()
@@ -264,7 +304,7 @@ class AnalystTests(unittest.TestCase):
             if kwargs['response_schema']['title']=='AnalystOutput':
                 self.assertNotIn('citation_fact_ids',payload)
                 self.assertIn('USD.buffer_gap',payload['evidence_catalog'])
-                self.assertIn('Copy citation IDs verbatim',prompt)
+                self.assertIn('Return action-led, cited cards',prompt)
                 return json.dumps(body)
             return json.dumps({'valid':True,'errors':[]})
         output=generate_suggestions(model,self.prompt,self.data,self.result,self.rules,'Validated',None)
@@ -301,7 +341,12 @@ class AnalystTests(unittest.TestCase):
             self.assertEqual(schema,'AnalystOutput')
             self.assertNotIn('CURRENT STAGE:',prompt)
             self.assertEqual(kwargs['required_tools'],set())
-            self.assertEqual(json.loads(content)['workbooks'],compact(self.data))
+            self.assertEqual(kwargs['initial_tool'],'record_portfolio_scan')
+            payload=json.loads(content)
+            self.assertNotIn('workbooks',payload)
+            self.assertNotIn('forecast',payload['calculations'])
+            self.assertIn('dated_relationships',payload['portfolio_map'])
+            self.assertEqual(tools['read_treasury_context'][1],self.data)
             self.assertIn('assess_funding_plan',kwargs['tool_handlers'])
             self.assertNotIn('assess_funding_plan',kwargs['required_tools'])
             self.assertEqual(tools['read_treasury_context'][1],self.data)
@@ -313,17 +358,29 @@ class AnalystTests(unittest.TestCase):
         result=generate_suggestions(writer,self.prompt,self.data,self.result,self.rules,'Validated',None)
         self.assertEqual(result['suggestion_origin'],'analyst')
 
-    def test_duplicate_cards_skipped_and_more_than_five_rejected(self):
+    def test_investigation_notes_are_saved_without_becoming_suggestion_gate(self):
+        note=dict(subject='Receipt before payment',observed='Recorded GBP inflow precedes the linked payment',decision='test',reason='Compare changing the planned purchase')
+        def writer(prompt,content,tools=None,**kwargs):
+            self.assertEqual(kwargs['initial_tool'],'record_portfolio_scan')
+            recorded=kwargs['tool_handlers']['record_portfolio_scan']['handler'](observations=[note])
+            self.assertEqual(recorded['recorded'],1)
+            return json.dumps(self.response())
+        output=generate_suggestions(writer,self.prompt,self.data,self.result,self.rules,'Validated',None)
+        self.assertEqual(output['investigation_log'],[note])
+        self.assertEqual(output['analyst_audit']['investigation_log'],[note])
+        self.assertTrue(output['suggestions'])
+
+    def test_duplicate_cards_skipped_without_a_five_card_schema_gate(self):
         body=self.response();body['suggestions']*=2
         warnings=[]
         _,cards=validate_output(json.dumps(body),self.catalog,self.result,self.rules,warnings)
         self.assertEqual(len(cards),1)
         self.assertTrue(any('duplicate' in w for w in warnings))
         body['suggestions']*=3
-        with self.assertRaises(ValueError):
-            validate_output(json.dumps(body),self.catalog,self.result,self.rules)
+        _,cards=validate_output(json.dumps(body),self.catalog,self.result,self.rules)
+        self.assertEqual(len(cards),1)
 
-    def test_demo_card_limit_warns_without_blocking(self):
+    def test_demo_card_count_does_not_limit_useful_distinct_cards(self):
         body=self.response()
         body['suggestions'].append(dict(topic='receipt_risk',currency='USD',severity='warning',title='Confirm receipt timing',
             summary='Check whether expected deposits will settle before the dollar obligations.',
@@ -333,7 +390,8 @@ class AnalystTests(unittest.TestCase):
         warnings=[]
         _,cards=validate_output(json.dumps(body),self.catalog,self.result,rules,warnings)
         self.assertEqual(len(cards),2)
-        self.assertTrue(any('demo policy' in warning for warning in warnings))
+        self.assertFalse(any('demo policy' in warning for warning in warnings))
+        self.assertNotIn('maxItems',analyst_schema()['properties']['suggestions'])
 
     def test_opportunity_without_a_threshold_breach_is_allowed(self):
         body=self.response()
@@ -427,7 +485,7 @@ class AnalystTests(unittest.TestCase):
         self.assertEqual(calls,['AnalystOutput'])
         self.assertEqual(output['analyst_audit']['evidence_review']['status'],'disabled_for_development')
         self.assertNotIn('investigation',output['analyst_audit'])
-        self.assertEqual(output['analyst_audit']['workflow_version'],'compact-routing-3')
+        self.assertEqual(output['analyst_audit']['workflow_version'],'candidate-investigation-1')
 
     def test_independent_review_is_not_requested_during_development(self):
         def wrong(*args,**kwargs):
@@ -520,5 +578,49 @@ class AnalystTests(unittest.TestCase):
         self.assertEqual({entry['name'] for entry in trace},set(results))
         results['evaluate_treasury_limits'][1]['findings'].append('later')
         self.assertEqual(trace[0]['result']['findings'],[])
+
+    def test_client_records_a_scan_before_allowing_a_final_answer(self):
+        requests=[];notes=[];trace=[]
+        note=dict(subject='Existing FX orders',observed='Two planned orders point in opposite directions',decision='test',reason='Compare cancellation costs')
+        class Response:
+            def __init__(self,body):self.body=json.dumps(body).encode()
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return self.body
+        def urlopen(request,**kwargs):
+            body=json.loads(request.data);requests.append(body)
+            if len(requests)==1:
+                message=dict(role='assistant',content=None,tool_calls=[dict(id='scan',type='function',function=dict(name='record_portfolio_scan',arguments=json.dumps(dict(observations=[note]))))])
+            elif len(requests)==2:
+                message=dict(role='assistant',content=None,tool_calls=[dict(id='test',type='function',function=dict(name='assess_fx_trade',arguments='{}'))])
+            else:message=dict(role='assistant',content='Finished')
+            return Response(dict(choices=[dict(message=message)]))
+        handlers={'record_portfolio_scan':dict(description='Log observations',parameters={'type':'object','properties':{}},handler=lambda observations:notes.extend(observations) or {'recorded':len(observations)}),
+            'assess_fx_trade':dict(description='Calculate a comparison',parameters={'type':'object','properties':{}},handler=lambda:{'passes_modeled_checks':True})}
+        with patch('backend.app.key',return_value='test'),patch('backend.app.urllib.request.urlopen',side_effect=urlopen):
+            answer=ask_model('instructions','context',tool_handlers=handlers,required_tools=set(),initial_tool='record_portfolio_scan',trace=trace)
+        self.assertEqual(answer,'Finished')
+        self.assertEqual(requests[0]['tool_choice']['function']['name'],'record_portfolio_scan')
+        self.assertEqual(requests[1]['tool_choice'],'required')
+        self.assertEqual([t['function']['name'] for t in requests[1]['tools']],['assess_fx_trade'])
+        self.assertEqual(requests[2]['tool_choice'],'auto')
+        self.assertEqual(notes,[note]);self.assertEqual([t['name'] for t in trace],['record_portfolio_scan','assess_fx_trade'])
+
+    def test_optional_capture_is_exact_request_body_without_auth_header(self):
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return b'{"choices":[{"message":{"content":"Done"}}]}'
+        requests=[]
+        def send(request,**kwargs):requests.append(request);return Response()
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch('backend.app.RUNTIME',Path(tmp)),patch('backend.app.key',return_value='not-in-body-secret'),\
+                patch('backend.app.log_model_usage'),patch('backend.app.urllib.request.urlopen',side_effect=send),\
+                patch.dict('os.environ',{'FX_CAPTURE_MODEL_PAYLOADS':'1'}):
+                self.assertEqual(ask_model('instructions','{"portfolio":"synthetic"}',usage_run_id='offline-test',trace_stage='suggestions'),'Done')
+            saved=Path(tmp)/'model-payloads/offline-test/suggestions-01.txt'
+            self.assertEqual(saved.read_bytes(),requests[0].data)
+            self.assertEqual(json.loads(json.loads(saved.read_bytes())['messages'][1]['content']),{'portfolio':'synthetic'})
+            self.assertNotIn(b'not-in-body-secret',saved.read_bytes())
 
 if __name__=='__main__':unittest.main()

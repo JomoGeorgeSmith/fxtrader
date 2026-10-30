@@ -81,7 +81,7 @@ def assess_fx_trade(data,result,rules,catalog,source,target,target_amount,settle
     timing=settlement_check(data,source,target,day,snapshot_dates(result)[0],booking_hour)
     risk=exposure_check(data,rules,{source:-principal,target:amount})
     checks=dict(account_permission_and_debit_limit=debit<=capacity,fee_account_capacity=cost+(principal if source=='JMD' else 0)<=source_capacity(data,'JMD',day),simulated_settlement_ready=timing['lead_time_satisfied'] and timing['arrival_is_business_day'],
-        all_debit_account_limits=debit_permissions(data,events),exposure_preserved=risk['aggregate_within_limit'] and risk['currency_limits_preserved'])
+        all_debit_account_limits=debit_permissions(data,events),exposure_preserved=risk['no_exposure_breach_worsened'])
     for scenario in scenarios.values():scenario['passes_modeled_checks']=scenario['passes_cash_checks'] and all(checks.values())
     values=[('source_principal','Source principal sold',principal,'money',source),('target_received','Destination acquired',amount,'money',target),
         ('fee_jmd','Simulated fee; no carry/opportunity cost included',cost,'money','JMD'),('settlement_date','Proposed arrival',day,'date',target),
@@ -147,7 +147,7 @@ def assess_allocation_plan(data,result,rules,catalog,source,legs,booking_hour=12
         fee_account_capacity=all(sum((D(leg['fee_jmd']) for leg in allocation if leg['settlement_date']==day),D(0))+(totals[day] if source=='JMD' else 0)<=source_capacity(data,'JMD',day) for day in totals),
         all_debit_account_limits=debit_permissions(data,events),
         simulated_settlement_ready=all(t['lead_time_satisfied'] and t['arrival_is_business_day'] for t in timings),
-        exposure_preserved=risk['aggregate_within_limit'] and risk['currency_limits_preserved'])
+        exposure_preserved=risk['no_exposure_breach_worsened'])
     for scenario in scenarios.values():scenario['passes_modeled_checks']=scenario['passes_cash_checks'] and all(checks.values())
     values.extend([('total_sold','Total source currency sold',total_sold,'money',source),
         ('total_fee_jmd','Total simulated conversion fees',total_fee,'money','JMD'),
@@ -207,7 +207,7 @@ def assess_receipt_match(data,result,rules,catalog,receipt_id,obligation_id,amou
         fee_account_capacity=remaining_fee+charge+(D(order['source_amount'])-freed if order['source']=='JMD' else 0)<=source_capacity(data,'JMD'),
         remaining_order_settlement_ready=full or all(settlement_check(data,order['source'],c,day,snapshot_dates(result)[0])[k] for k in ('lead_time_satisfied','arrival_is_business_day')),
         all_debit_account_limits=debit_permissions(data,debits),
-        exposure_preserved=risk['aggregate_within_limit'] and risk['currency_limits_preserved'])
+        exposure_preserved=risk['no_exposure_breach_worsened'])
     passes=all(v for k,v in checks.items() if k!='delayed_receipt_arrives_before_payment') and after['baseline']['passes_cash_checks']
     return publish(data,rules,catalog,'receipt_match',dict(receipt_id=receipt_id,obligation_id=obligation_id,amount=str(amount),purchase_order_id=purchase_order_id),
         dict(checks=checks,passes_modeled_checks=passes,scenarios=after,original_order_scenarios=before,risk=risk,
@@ -243,7 +243,7 @@ def assess_round_trip(data,result,rules,catalog,first_order_id,second_order_id):
     risk=exposure_check(data,rules,changes)
     checks=dict(cancellation_permitted=a['cancellable'] and b['cancellable'],no_linked_payment_needs=True,
         fee_account_permission=debit_permissions(data,[(snapshot_dates(result)[0],'JMD',-charge)]),
-        exposure_preserved=risk['aggregate_within_limit'] and risk['currency_limits_preserved'],modeled_cost_reduction=net>0)
+        exposure_preserved=risk['no_exposure_breach_worsened'],modeled_cost_reduction=net>0)
     return publish(data,rules,catalog,'cancel_orders',dict(first_order_id=first_order_id,second_order_id=second_order_id),
         dict(checks=checks,passes_modeled_checks=all(checks.values()) and after['baseline']['passes_cash_checks'],scenarios=after,original_order_scenarios=before,risk=risk,
             comparison='Complete both recorded orders versus cancel both; spread loss valued at current source buying price, not a realized return. Intermediate currency availability is rechecked.'),
@@ -287,7 +287,7 @@ def assess_forward_hedge(data,result,rules,catalog,source,obligation_id,target_a
         arrives_before_payment=day<due,source_account_capacity=principal<=capacity,collateral_and_fee_account_capacity=collateral+cost<=source_capacity(data,'JMD'),
         all_debit_account_limits=debit_permissions(data,events),
         simulated_settlement_ready=timing['arrival_is_business_day'] and timing['lead_time_satisfied'],
-        exposure_preserved=risk['aggregate_within_limit'] and risk['currency_limits_preserved'])
+        exposure_preserved=risk['no_exposure_breach_worsened'])
     for scenario in scenarios.values():scenario['passes_modeled_checks']=all(checks.values()) and scenario['passes_cash_checks']
     # Transparent future-spot sensitivities are not forecasts or guaranteed P&L.
     sensitivity=[]
@@ -312,7 +312,7 @@ def scenario_tools(data,result,rules,catalog):
     currency=dict(type='string',enum=list(CURRENCIES))
     amount=dict(type='number',exclusiveMinimum=0,description='Destination/receipt amount, at most two decimals.')
     definitions={
-        'assess_fx_trade':(assess_fx_trade,'Test your dated currency sale/purchase for concentration reduction or funding-source comparison; checks currency/aggregate exposure, fees, account permissions, cash cushions and simulated settlement. Compare alternatives yourself; no ranking/execution.',
+        'assess_fx_trade':(assess_fx_trade,'Test your dated currency sale/purchase for concentration reduction or funding-source comparison; reports before/after currency and aggregate exposure breaches, fees, account permissions, cash cushions and simulated settlement. A smaller breach remains a breach. Compare alternatives yourself; no ranking/execution.',
              dict(source=currency,target=currency,target_amount=amount,settlement_date=text('ISO arrival date inside forecast; you choose it.'),booking_hour=dict(type='integer',minimum=0,maximum=23),expected_receipt_delay_days=dict(type='integer',minimum=1,maximum=28))),
         'assess_allocation_plan':(assess_allocation_plan,'Optionally test YOUR proposed sale of one currency into two or three distinct currencies needed for recorded payments. No destination, amount or trade is selected by code. All legs, fees, dates, cash cushions and exposure are checked together; failed or receipt-dependent plans cannot become action rows.',
             dict(source=currency,legs=dict(type='array',minItems=2,maxItems=3,items=dict(type='object',properties=dict(target=currency,target_amount=amount,settlement_date=text('ISO date within forecast'),obligation_id=text('Existing payment ID')),required=['target','target_amount','settlement_date','obligation_id'],additionalProperties=False)),booking_hour=dict(type='integer',minimum=0,maximum=23),expected_receipt_delay_days=dict(type='integer',minimum=1,maximum=28))),

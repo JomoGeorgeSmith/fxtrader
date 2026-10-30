@@ -28,11 +28,26 @@ def scenario_summary(result):
 
 
 def assessment_summary(report):
-    # The writer explains actual calculations; no need to resend another AI's
-    # memo plus a duplicate full trace and the same facts again in the catalog.
-    return dict(task=report['task'],status=report['status'],error=report.get('error'),
-        calculations=[dict(name=t['name'],arguments=t['arguments'],result={k:v for k,v in scenario_summary(t['result']).items() if k!='facts'})
-            for t in report['tool_calls'] if t['name'] in ('assess_funding_plan','simulate_fx_conversion')])
+    # Earlier CAD tests are useful, but duplicating every cash day and every
+    # assumption anchors the writer on this one task. Full trace stays in audit.
+    calculations=[]
+    for t in report['tool_calls']:
+        if t['name'] not in ('assess_funding_plan','simulate_fx_conversion'):continue
+        result=t['result']
+        if 'error' in result:
+            summary={'error':result['error']}
+        elif t['name']=='assess_funding_plan':
+            risk=result.get('risk') or {}
+            summary={k:result.get(k) for k in ('plan_id','source','target','obligation_id','requested_target_amount',
+                'source_principal','settlement_date','obligation_date','exposure_pct','exposure_within_demo_limit')}
+            summary['risk']={k:risk.get(k) for k in ('previous_exposure_pct','exposure_pct','no_exposure_breach_worsened')}
+            summary['simulation_checks']=result.get('simulation_checks')
+            summary['scenarios']={mode:{k:value.get(k) for k in ('passes_modeled_checks','source_low','target_low',
+                'target_remaining_buffer_gap')} for mode,value in result.get('scenarios',{}).items()}
+        else:
+            summary={k:v for k,v in scenario_summary(result).items() if k!='facts'}
+        calculations.append(dict(name=t['name'],arguments=t['arguments'],result=summary))
+    return dict(task=report['task'],status=report['status'],error=report.get('error'),calculations=calculations)
 
 
 def model_json(value):
