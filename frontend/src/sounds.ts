@@ -1,12 +1,12 @@
 /** Original synthesized candy-like sounds; no recordings or game assets. */
 export type Severity = 'info' | 'warning' | 'critical';
-export type SoundSuggestion = {id:string; severity:string; summary:string};
+export type SoundSuggestion = {id:string; severity:string; summary:string;recommended_action?:unknown;expected_result?:string|null};
 export const melodies: Record<Severity, {note:number;at:number;length:number}[]> = {
   info: [ {note:1046.5,at:0,length:.17}, {note:1568,at:.11,length:.29}, {note:2093,at:.22,length:.32} ],
   warning: [ {note:784,at:0,length:.16}, {note:1046.5,at:.12,length:.22}, {note:784,at:.33,length:.16}, {note:1174.7,at:.45,length:.3} ],
   critical: [ {note:659.3,at:0,length:.13}, {note:880,at:.13,length:.14}, {note:659.3,at:.3,length:.13}, {note:880,at:.43,length:.14}, {note:1318.5,at:.61,length:.32} ],
 };
-export function signature(s:SoundSuggestion){return JSON.stringify([s.id,s.severity,s.summary])}
+export function signature(s:SoundSuggestion){return JSON.stringify([s.id,s.severity,s.summary,s.recommended_action??null,s.expected_result??null])}
 export function newSuggestionSounds(previous:SoundSuggestion[], next:SoundSuggestion[]):Severity[]{
   const seen=new Set(previous.map(signature));
   return next.filter(s=>!seen.has(signature(s))&&Object.hasOwn(melodies,s.severity)).map(s=>s.severity as Severity);

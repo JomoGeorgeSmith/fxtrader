@@ -81,6 +81,35 @@ class FundingPlanTests(unittest.TestCase):
         self.assertFalse(result['settles_by_obligation'])
         self.assertFalse(result['scenarios']['baseline']['target_cash_nonnegative_through_obligation'])
 
+    def test_arrival_margin_is_computed_from_first_shortfall_not_payment_due_date(self):
+        now=datetime(2026,10,28)
+        self.data['payments']=[dict(id='EARLY',currency='USD',amount=4550000,value_date='2026-11-14',status='Committed',_source='Frozen test'),
+            dict(id='LATER',currency='USD',amount=2200000,value_date='2026-11-17',status='Committed',_source='Frozen test')]
+        self.data['receipts']=[dict(id='UNCERTAIN',currency='USD',amount=1400000,value_date='2026-11-01',status='Expected',_source='Frozen test')]
+        for row in self.data['accounts']:
+            row['balance']=5400000 if row['currency']=='USD' else 1000000000
+            row['holds']=100000 if row['currency']=='USD' else 0
+        result=evaluate(self.data,self.rules,now)
+        def assess(day):return assess_funding_plan(self.data,result,self.rules,self.catalog,source='GBP',obligation_id='LATER',target_amount=2450000,settlement_date=day)
+        earlier=assess('2026-11-13')
+        timing=earlier['timing']
+        self.assertEqual(timing['baseline_first_shortfall'],'2026-11-17')
+        self.assertEqual(timing['without_expected_receipts_first_shortfall'],'2026-11-14')
+        self.assertEqual(timing['calendar_days_before_first_shortfall'],1)
+        self.assertTrue(timing['settlement_is_weekday'])
+        self.assertFalse(timing['bank_delivery_confirmed'])
+        same_day=assess('2026-11-14')['timing']
+        self.assertEqual(same_day['calendar_days_before_first_shortfall'],0)
+        self.assertFalse(same_day['settlement_is_weekday'])
+        self.assertEqual(assess('2026-11-17')['timing']['calendar_days_before_first_shortfall'],-3)
+        self.assertIn(earlier['plan_id']+'.arrival_margin_days',self.catalog)
+
+    def test_no_preexisting_gap_does_not_invent_a_funding_deadline(self):
+        for account in self.data['accounts']:account['balance']=1000000000
+        timing=self.assess()['timing']
+        self.assertIsNone(timing['earliest_modeled_shortfall'])
+        self.assertIsNone(timing['calendar_days_before_first_shortfall'])
+
     def test_same_day_source_receipt_is_not_assumed_available_before_debit(self):
         self.data['receipts'].append(dict(id='LARGE',currency='JMD',amount=1000000000,value_date=self.day(2),status='Confirmed',_source='test receipt'))
         result=self.assess(target_amount=3000000)

@@ -1,0 +1,2855 @@
+{
+  "format_version": 1,
+  "created_local": "2026-10-28T14:24:10.480424-05:00",
+  "project": "JN Treasury FX Analyst POC",
+  "source_git": {
+    "branch": "orchestrator",
+    "head": "cf8a780b4da2f8419873ba4df7d21c2cc324d460",
+    "status": "## orchestrator...origin/orchestrator\n M README.md\n M backend/analyst.py\n M backend/app.py\n M backend/calculation_cache.py\n M backend/calculations.py\n M backend/funding_plan.py\n M backend/model_context.py\n M backend/orchestrator.py\n M backend/prompts/fx_analyst.md\n M frontend/src/analyst.css\n M frontend/src/main.tsx\n M frontend/src/sounds.ts\n M tests/test_analyst.py\n M tests/test_efficiency.py\n M tests/test_funding_plan.py\n M tests/test_orchestrator.py\n?? NEW_MACHINE_SETUP.md\n?? PROJECT_HANDOVER.md\n?? TRANSFER_README.md\n?? backend/fx_market.py\n?? backend/fx_scenarios.py\n?? backend/recommended_action.py\n?? backend/simulation_inputs.py\n?? backend/synthesize_fx.py\n?? docs/\n?? frontend/src/RecommendedAction.tsx\n?? frontend/src/actionDisplay.ts\n?? frontend/tests/recommendedAction.test.ts\n?? tests/test_fx_scenarios.py\n?? tests/test_recommended_action.py\n?? tools/",
+    "remote": "https://github.com/JomoGeorgeSmith/fxtrader.git"
+  },
+  "copied_git_status": "## orchestrator...origin/orchestrator\n M README.md\n M backend/analyst.py\n M backend/app.py\n M backend/calculation_cache.py\n M backend/calculations.py\n M backend/funding_plan.py\n M backend/model_context.py\n M backend/orchestrator.py\n M backend/prompts/fx_analyst.md\n M frontend/src/analyst.css\n M frontend/src/main.tsx\n M frontend/src/sounds.ts\n M tests/test_analyst.py\n M tests/test_efficiency.py\n M tests/test_funding_plan.py\n M tests/test_orchestrator.py\n?? NEW_MACHINE_SETUP.md\n?? PROJECT_HANDOVER.md\n?? TRANSFER_README.md\n?? backend/fx_market.py\n?? backend/fx_scenarios.py\n?? backend/recommended_action.py\n?? backend/simulation_inputs.py\n?? backend/synthesize_fx.py\n?? docs/\n?? frontend/src/RecommendedAction.tsx\n?? frontend/src/actionDisplay.ts\n?? frontend/tests/recommendedAction.test.ts\n?? tests/test_fx_scenarios.py\n?? tests/test_recommended_action.py\n?? tools/",
+  "environment": {
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "node": "v24.20.0",
+    "installed_python_packages": {
+      "annotated-doc": "0.0.5",
+      "annotated-types": "0.8.0",
+      "anyio": "4.15.1",
+      "certifi": "2026.10.23",
+      "charset-normalizer": "3.5.2",
+      "click": "8.5.0",
+      "distro": "1.9.0",
+      "et_xmlfile": "2.0.0",
+      "fastapi": "0.162.0",
+      "h11": "0.16.0",
+      "httpcore": "1.0.9",
+      "httpcore2": "2.16.0",
+      "httpx": "0.28.1",
+      "httpx2": "2.16.0",
+      "idna": "3.20",
+      "jsonpatch": "1.38",
+      "jsonpointer": "3.6",
+      "kafka-python": "2.3.3",
+      "langchain-core": "1.7.0",
+      "langchain-protocol": "0.0.20",
+      "langgraph": "1.2.18",
+      "langgraph-checkpoint": "4.3.1",
+      "langgraph-prebuilt": "1.1.1",
+      "langgraph-sdk": "0.4.10",
+      "langsmith": "0.14.14",
+      "openpyxl": "3.1.5",
+      "opentelemetry-api": "1.45.1",
+      "orjson": "3.13.0",
+      "ormsgpack": "1.13.0",
+      "packaging": "26.3",
+      "pip": "25.0.1",
+      "pydantic": "2.14.1",
+      "pydantic_core": "2.50.1",
+      "PyYAML": "6.0.3",
+      "requests": "2.34.2",
+      "requests-toolbelt": "1.0.0",
+      "sniffio": "1.3.1",
+      "starlette": "1.10.0",
+      "tenacity": "9.2.1",
+      "truststore": "0.10.5",
+      "typing-inspection": "0.4.4",
+      "typing_extensions": "4.16.0",
+      "urllib3": "2.8.0",
+      "uuid_utils": "0.19.0",
+      "uvicorn": "0.54.0",
+      "websockets": "17.3",
+      "xxhash": "4.0.2",
+      "zstandard": "0.25.0"
+    }
+  },
+  "audit": {
+    "runs": 62,
+    "application_chat_messages": 12,
+    "latest_analysis": {
+      "id": "ba80ea1e1b3a4c32b62fe1bc2cddeffb",
+      "created": "2026-10-28T11:22:40.565663"
+    }
+  },
+  "workbook_rows": {
+    "accounts": 4,
+    "reserves": 4,
+    "risk": 3,
+    "rates": 3,
+    "payments": 18,
+    "receipts": 13,
+    "liquidity_inputs": 6,
+    "fx_limits": 3,
+    "fx_terms": 4,
+    "fx_permissions": 4,
+    "fx_receipt_timing": 13,
+    "fx_holidays": 8,
+    "fx_orders": 4,
+    "fx_hedge_policy": 4,
+    "fx_counterparties": 1,
+    "fx_hedges": 0,
+    "fx_allocations": 0
+  },
+  "files": [
+    {
+      "path": ".git/COMMIT_EDITMSG",
+      "bytes": 60,
+      "sha256": "7bb50e26a4ceb1c29fd125a0c7cc468d534f0b5f2c7bc13c4ee669bde99528cb"
+    },
+    {
+      "path": ".git/config",
+      "bytes": 335,
+      "sha256": "81c0a432e031eaa04d60e69f9492a88cc5e6329c9774973612654693a33c303b"
+    },
+    {
+      "path": ".git/description",
+      "bytes": 73,
+      "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+      "path": ".git/HEAD",
+      "bytes": 29,
+      "sha256": "08e31716ef7042c2f4af09916b0158abefe76227d256ea2cef190c2bfba95541"
+    },
+    {
+      "path": ".git/index",
+      "bytes": 4127,
+      "sha256": "35a3d9d9ce7a6307291dfdbc7c51849ec7cd6273cc1b972e85b31391cb7a3fdb"
+    },
+    {
+      "path": ".git/info/exclude",
+      "bytes": 240,
+      "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+      "path": ".git/logs/HEAD",
+      "bytes": 671,
+      "sha256": "dc5e796f3b801236aa1f78185a486fae4ac6a20bac645a84dda823cb788a0d1a"
+    },
+    {
+      "path": ".git/logs/refs/heads/main",
+      "bytes": 236,
+      "sha256": "b539fedd9e777c53f82e27800890dd243b1c60cbe170d02fc7658ab796e70acf"
+    },
+    {
+      "path": ".git/logs/refs/heads/orchestrator",
+      "bytes": 418,
+      "sha256": "1212432e2760c66118cf6a1c6890c9c15b7c3eb3c1493d7931ec790e6391547d"
+    },
+    {
+      "path": ".git/logs/refs/remotes/origin/main",
+      "bytes": 177,
+      "sha256": "003027d68b76b39c7e280f199f7de8c793f9ae938d65bf32917a3c7ada4ff29e"
+    },
+    {
+      "path": ".git/logs/refs/remotes/origin/orchestrator",
+      "bytes": 354,
+      "sha256": "2c8db767a396b3f5f2057c80f23f98cc3fe002df818eb8b7bbc8bb2eb5e72c0b"
+    },
+    {
+      "path": ".git/objects/00/8c8cd28f0361206b22e162fc310abd9f261f06",
+      "bytes": 2608,
+      "sha256": "efe1d58ce679ebe8b548b9c23a6b87577a2ab3bc353a202320050031b64911be"
+    },
+    {
+      "path": ".git/objects/01/15213b71c1a471b194cc4e10ba32fd0911d07e",
+      "bytes": 777,
+      "sha256": "3933d474c47965197880a6367d45b0b95f31feebdb1d3ccc0bdd5a03871dd189"
+    },
+    {
+      "path": ".git/objects/01/882253d340fad3507445a74de99763bb429982",
+      "bytes": 6442,
+      "sha256": "fa16a242022474a2a0d340e2f9f20741cdc0b697b58d0d4b2d35742374bfc372"
+    },
+    {
+      "path": ".git/objects/04/7f8d898a1dcdaf7f0f9b4892426606a7be0bc7",
+      "bytes": 83,
+      "sha256": "192a1634d916f622302fb01571ef80d33bb670cf88e2bad84333108bfc8c911b"
+    },
+    {
+      "path": ".git/objects/0c/b09e1681f0f9075ac6c032041d8f36ef1d0248",
+      "bytes": 287,
+      "sha256": "5c894aa54fc255bc3431637c48014c6c737be812a1550e1d2a9997fe106cba9d"
+    },
+    {
+      "path": ".git/objects/0e/8ce824e7a41010dbde59a6414c1b0368337401",
+      "bytes": 826,
+      "sha256": "94a3bb5967070386246b51520f70e37b6b31b7f76fc770a2631938cf675504a2"
+    },
+    {
+      "path": ".git/objects/0f/f785b2707e7aff67c9158727840ad9d390e37e",
+      "bytes": 317,
+      "sha256": "1ed6dd55a41f4f73df6b90b5fe79352da7d3ac6538af80940b9c306820b0157b"
+    },
+    {
+      "path": ".git/objects/13/f75fbbfded44e7d63b0f8bf2349d9fd5723e2d",
+      "bytes": 5870,
+      "sha256": "8f2b19363929ef6a2223f7001e7047390afe61c73bcdba723b85ccc877563c2d"
+    },
+    {
+      "path": ".git/objects/15/5a9bfe548b198da89c3253da26e9bb780b6cb6",
+      "bytes": 353,
+      "sha256": "d7724cd6b44c9e0548c348fd9b96d671dc5b0b34a8f566d1625ae0d4d35372c9"
+    },
+    {
+      "path": ".git/objects/1c/ba302639b13abd789e2c3e2e83b42a1313bd5a",
+      "bytes": 221,
+      "sha256": "b313ec9a74389712dbdf3d0158178c68c88a65985530f47b729d73a84f46475c"
+    },
+    {
+      "path": ".git/objects/22/012ab2e89c79ee2c6abb5bdb161a1fc145d095",
+      "bytes": 1057,
+      "sha256": "1588d1a0dd5f131fbfde91969fbd594003e45c9bf060cc1aa4982780df84fb5e"
+    },
+    {
+      "path": ".git/objects/22/2305894a0b8c76f3d63e2bca8fba594f5fae8a",
+      "bytes": 939,
+      "sha256": "4fbd86ce725860925378afe5b309b551d0dc01a4e8dd74a55b6748582d9126f6"
+    },
+    {
+      "path": ".git/objects/2c/fe6146ce145d0038e57881002b29f52254e86a",
+      "bytes": 1383,
+      "sha256": "2542cb2ef4351ee98621aa77175c117be13a0bc70c24f650b2023c834ec8b29b"
+    },
+    {
+      "path": ".git/objects/3e/0f29ea7f685179dec69bcdb8e40f6738672674",
+      "bytes": 6241,
+      "sha256": "cd268810418c28123641f72c6ce0afc7496e3655c2a18c25989e9484e468758c"
+    },
+    {
+      "path": ".git/objects/3e/1048592bf507d7d03dd9c1a3c07a54fb9ef056",
+      "bytes": 2557,
+      "sha256": "1e796d31d161970040a55e78e93a446018ee56564e336a747b517a4db9b2c869"
+    },
+    {
+      "path": ".git/objects/47/e6a22e4343b32f101805664b418729579ec039",
+      "bytes": 1425,
+      "sha256": "d40c44a16ab3577328b54ab91979c9c3558a91bd92fc425c40baacdf3796e83e"
+    },
+    {
+      "path": ".git/objects/48/934947728bf292901aa730b5776551de251782",
+      "bytes": 96,
+      "sha256": "188755674da52dfcb37e0ee0f124991688d348ba6564d0ebd50707ba06412d69"
+    },
+    {
+      "path": ".git/objects/4b/fcfc368b1ac9d778920ad77f308589711e2a55",
+      "bytes": 4644,
+      "sha256": "dc66ecf69d58fe8b8e0628c978c856ad33b553107f767d8af4be38eb5c695790"
+    },
+    {
+      "path": ".git/objects/4d/22298291912e4a05b9726d315a3023efe82be8",
+      "bytes": 114,
+      "sha256": "173c00f1c731fb9e0f38c4508b1333d54531982c4e8b8109e6fe625d84a09e30"
+    },
+    {
+      "path": ".git/objects/50/02bf7b64be9bca63642edb91581c8d7069a083",
+      "bytes": 58,
+      "sha256": "4bf02ef0f5bd30f1f2595279e60c4b634ca6dea5bb03de29942bb8032a7ce917"
+    },
+    {
+      "path": ".git/objects/5a/8d3ee488a4f912bff2214e5dddde6649409833",
+      "bytes": 362,
+      "sha256": "0a612e8f65719bf64fdc756f1df95fc91ac42f2e72de816d9775144ac6f7bdcd"
+    },
+    {
+      "path": ".git/objects/61/2c6584b735028cad91b5eef4e30763f83c88b9",
+      "bytes": 57,
+      "sha256": "b23a1a92cb1bab707404ee588092e1dbb51b83bb692335eaacfd36e26620fff2"
+    },
+    {
+      "path": ".git/objects/62/dffa98dfa79d209ff631ca5f0256b6ec34c8bb",
+      "bytes": 8976,
+      "sha256": "dd020f76d435ee59000abf2fba054df52d18effd6ad097399dbab52ade42708f"
+    },
+    {
+      "path": ".git/objects/63/6c7bac0576c4bfef16a5e7969cc76941f27aaf",
+      "bytes": 9061,
+      "sha256": "b032408734ebdcef7378ad9aef92124f7e6d3e733433589a65e3f9f80d94894b"
+    },
+    {
+      "path": ".git/objects/65/a3ea62f929665fbbbe9854dd8852ca2fafbbc1",
+      "bytes": 3900,
+      "sha256": "16744816f966f58db6c868573597e53b1bc64f3698bf830cbc679c97b5c093ba"
+    },
+    {
+      "path": ".git/objects/6b/7b1fe6aa66f3b142c3c21f12174c168830accb",
+      "bytes": 245,
+      "sha256": "3a1940dcca4c8e62152080c0ccf27556565ae5620df28e08f7b5d045d7bb5eaf"
+    },
+    {
+      "path": ".git/objects/6b/ba4a2a8f625dfcf18e6c9b4571b4142c6b2e2b",
+      "bytes": 60,
+      "sha256": "5c3d20349fba1473fc233b7d39f9e94424975eeafc0a492c8738db484fc356f5"
+    },
+    {
+      "path": ".git/objects/6d/24dd9e169cc377a784dc91c3726c2bab07e8b8",
+      "bytes": 331,
+      "sha256": "68d19feb4106d7a0fd6034a7dc413d073ac1f9cb17495733b998ee0ca6bb72e3"
+    },
+    {
+      "path": ".git/objects/6d/c1889923e3cc74d34958bfeabaaecd82db4f9c",
+      "bytes": 8898,
+      "sha256": "35dcbb685dbc8b7f7d036df5ebdc659cf7f5e9ea86a99f877c84a3ab058a313d"
+    },
+    {
+      "path": ".git/objects/6e/261badf0287faa0e1d7faf3f04096e44d44503",
+      "bytes": 5050,
+      "sha256": "09c5e136ce689e62609d64108d568beda106b3c156fc3c2e68f1a8bb4335acee"
+    },
+    {
+      "path": ".git/objects/6e/524a734881ee288bfe3500c8cacc995c6a5033",
+      "bytes": 273,
+      "sha256": "250ddf6ba98c99e06f6be42c2da98e2461b4b2eee4ffc684bd795388c6bd44fb"
+    },
+    {
+      "path": ".git/objects/70/c6a57b4a7d2b5944f06f3fc381d2c42c991ecb",
+      "bytes": 2509,
+      "sha256": "748a58d74a8e10dc0a5c583075e7072b022653c25f6e136bffa6df7a58dad570"
+    },
+    {
+      "path": ".git/objects/74/f7fe96fca42a6d1b2769958077d99b3192bf48",
+      "bytes": 802,
+      "sha256": "33c6e4fd7b1ecc689307a1e61e7cdc531a14ac8b7df4d181e1577b1adec15635"
+    },
+    {
+      "path": ".git/objects/7d/b062459fce0621f661d2f360bcfe38f5379ec0",
+      "bytes": 1771,
+      "sha256": "d74e6f0a2cc13f5a0762bca741d66319acbea12ea0446adc8fc49c087b62ae56"
+    },
+    {
+      "path": ".git/objects/80/11e57c7ea02850e865dd837547969fd41457dc",
+      "bytes": 361,
+      "sha256": "35fccf910df3cda9ce30a9055a6ab32b1a644d993abedd1c9d002e7cc542ec6c"
+    },
+    {
+      "path": ".git/objects/8a/95471b7d2bef973585df320f0755e034239069",
+      "bytes": 2677,
+      "sha256": "460179e7026d2eadda4484e0ec5d0ea258f8c9bd17f622f3b8e7db018588b3de"
+    },
+    {
+      "path": ".git/objects/8b/98d45d99dab3241f7b0d1455f01f5d0fee5f64",
+      "bytes": 225,
+      "sha256": "b2810042455ca9276e985df6f50cef4c9315ec60244009b8a7009b41c9d06977"
+    },
+    {
+      "path": ".git/objects/8d/e41702042ea5023b579df35a5aae78c43a8d64",
+      "bytes": 844,
+      "sha256": "ce70af4ed261574cd46ba84960cedf5178f2f0ff967980727a0810a65aa8f3a4"
+    },
+    {
+      "path": ".git/objects/8d/fe10f988fc4079ca2a3ee5850b70c600c10b3d",
+      "bytes": 103481,
+      "sha256": "36099406eff3eecf64fc133c78ae5d379e5fc36cd462974656e4c7e8692dae15"
+    },
+    {
+      "path": ".git/objects/92/2ed382dcaf70eeb2488f6e8c70bb9d37c9fb5c",
+      "bytes": 1696,
+      "sha256": "2d1df253f437406b71d8cee3108942e01821b1b44aff7e250829f4b011c86e09"
+    },
+    {
+      "path": ".git/objects/93/0f8fa6e6d8c019b9dd3c07f441f93ef47dd17a",
+      "bytes": 184,
+      "sha256": "4bdefdd0b2a30b1f27a4842de586e2dee92818840d75eda1a88688238b9ea130"
+    },
+    {
+      "path": ".git/objects/9b/4d87e27791040a4d7c0524e4841a2bae8cb4b1",
+      "bytes": 245,
+      "sha256": "e3d40c5201289044b0f2fa7a4b206694392462b2de083e626fc682929a44106d"
+    },
+    {
+      "path": ".git/objects/9c/81b2d07c4c2e31ce48cdc2634f8f8a9da8ac93",
+      "bytes": 533,
+      "sha256": "9cd0d821ae9ab13a9935525699afadb0c0a708be18e1c1bc01d580a2a28be3db"
+    },
+    {
+      "path": ".git/objects/9e/19b264ed2f7c3591dddee4778da3764f61e1e4",
+      "bytes": 328,
+      "sha256": "f510b9cbce70696a38e73b90a2e56e1787bb03ed877d90ef5cbc39144991424a"
+    },
+    {
+      "path": ".git/objects/a0/07e978bd1bdf9819d46ef42d4128dbc48b9a19",
+      "bytes": 225,
+      "sha256": "90cab3c785081ab0a33a9b781df7cb320570e041fc1077f0e766d03bbfdf8250"
+    },
+    {
+      "path": ".git/objects/aa/10dd8897d9175252d7b8bf89d942bf82bd1a04",
+      "bytes": 7534,
+      "sha256": "8e0c8f16436ac89a33e00f10c316cec376cfe024cf012431a88bc03422ba41a9"
+    },
+    {
+      "path": ".git/objects/ab/0426fc151f257311a7304c6808588d206678c6",
+      "bytes": 58,
+      "sha256": "67ae9e6f5f1b5161dc0e34f3348739f4e07cc1b6003a2ab67cfbb70d1cae45c9"
+    },
+    {
+      "path": ".git/objects/ab/177f75a129055d1c56a1e310f18f97815b3f4d",
+      "bytes": 594,
+      "sha256": "4e882ac41b2112a6e907580421ac442f0a36299ec7cae10cc794f4f9ebed7e57"
+    },
+    {
+      "path": ".git/objects/b1/212b354c5fa6526e60c518905b9f187561f86e",
+      "bytes": 4645,
+      "sha256": "66fca163494930b581e3a2c6cfdafe61965b47f2ec710157f6a714a17e4ec82d"
+    },
+    {
+      "path": ".git/objects/b2/343110b16fdd0b1c0cfb54432e2c6b4f165be7",
+      "bytes": 4195,
+      "sha256": "bf36c0eb48f2f94aeb587941fc2beeb84330847058e9ae20a895d9b8a56778a7"
+    },
+    {
+      "path": ".git/objects/b5/405c85e2d085d1dfb471284f502f1d55df7bc7",
+      "bytes": 433,
+      "sha256": "96ff4d360c7b05461d7b753d8dad478ce13b535936f032a834d7600f392305bc"
+    },
+    {
+      "path": ".git/objects/b5/ff5a32e3722f58a7d5b949182d831ae0f5f8e9",
+      "bytes": 962,
+      "sha256": "4f07b7125bbe2910c48f16dd03eaeb258caa0aafa83ce052808f5fa2fe374780"
+    },
+    {
+      "path": ".git/objects/ba/8adcb75849b02ad6781535d210027b68145339",
+      "bytes": 253,
+      "sha256": "cb37d9281766670fc2a6d5342ecaeebdbd665be661d2bb8549da5f74d5167547"
+    },
+    {
+      "path": ".git/objects/c0/7eda64ef2e932fd8e90fce54db8dcd2f7f14e7",
+      "bytes": 2072,
+      "sha256": "a9d45fee55c07b53de36b2e68d95a143de796bc87fb5da127a4fa4e5c5b0eed5"
+    },
+    {
+      "path": ".git/objects/c2/3bd58fc86b37d9c1e9e090057f288b84e36837",
+      "bytes": 8079,
+      "sha256": "006833a3d36b3c98aa118c2b599cc2c58eaa2286617a571a93db492c55af0cb6"
+    },
+    {
+      "path": ".git/objects/c3/0a9c2c4789c204634b3df9800bafcca10dfc11",
+      "bytes": 229,
+      "sha256": "6b4200b89efd3557f0b28b050f5588ec7de4bfe01752a906f711eec4a086ae5c"
+    },
+    {
+      "path": ".git/objects/c7/c91e0cb9ca810e1c151152ddf436a34493fc74",
+      "bytes": 9703,
+      "sha256": "bccc4a4c7edc2d9c9c16d46adeafebdbef794b93b0dcec838e55d83ab027c0cd"
+    },
+    {
+      "path": ".git/objects/cd/985d32c5b6195c07276a02de80f40ea6712715",
+      "bytes": 4830,
+      "sha256": "e4fd9a324066c5775305608d5a3d0c891b85ab891472023c983c746c746a95e0"
+    },
+    {
+      "path": ".git/objects/cf/8a780b4da2f8419873ba4df7d21c2cc324d460",
+      "bytes": 216,
+      "sha256": "55691e61882ae4e1138db79bc20a8c45d823591c8ca1721320a6cfdb80dc6f35"
+    },
+    {
+      "path": ".git/objects/d3/60ceec59b507d31bc369468e9088eb1b6340e2",
+      "bytes": 6862,
+      "sha256": "0027371cbc34e52ea725537a92043407690565f5608a5c690047828124814cfc"
+    },
+    {
+      "path": ".git/objects/d3/fcedd8e1030402de94c181a8cfbfa57a6fec09",
+      "bytes": 334,
+      "sha256": "f93a45341cbf884f0f589dc8197060c9b695c38353ac96c273eafb258213d55f"
+    },
+    {
+      "path": ".git/objects/d6/c81b7281848dc33407533550028ef497e132d5",
+      "bytes": 202,
+      "sha256": "3b93b73c8b95405782084a22795a4c9fb0e24bbaaa92efb765c53a5d21f63da2"
+    },
+    {
+      "path": ".git/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 15,
+      "sha256": "164c5fa8067facf1a43f09ce3d0e35ebf53a7f5723ecbf15a8667cfc53c26f6c"
+    },
+    {
+      "path": ".git/objects/e9/22f37ae87a60f26ba3a3760e744ed2823dfa22",
+      "bytes": 204,
+      "sha256": "3086616f139bd3fc1edaed28943b2259d8b629d85bd378762a51c013e04ddf20"
+    },
+    {
+      "path": ".git/objects/ed/e0f46986c6ba142e0bfe0772693cc3017b5512",
+      "bytes": 362,
+      "sha256": "e41ecaa7fd43f5bd03b37fd273748ba30111aba3cf052bc97d8ec26bf5129c7d"
+    },
+    {
+      "path": ".git/objects/ef/4768c1a0d5c59e499b5e6b0cbd7087b9eaaf1f",
+      "bytes": 2114,
+      "sha256": "bc8f3c077d0ab696400226769675ad6801fd24423fbfb3313f4107f57c16e01a"
+    },
+    {
+      "path": ".git/objects/f5/21bb278dadf41d087c867617fe0d4f15561f6d",
+      "bytes": 1319,
+      "sha256": "8c32dc0a71dade7699ed666b000c08d6012f252835fc8cc6ea9597ea9d6e87b1"
+    },
+    {
+      "path": ".git/objects/f7/69c001afc1d97443109ae24a7b3d2b6afe3a10",
+      "bytes": 96,
+      "sha256": "5ef22ae9744e5a3bf2492b862e48def3e69fbd250c7f0dd5a77e439584536144"
+    },
+    {
+      "path": ".git/objects/ff/5103f86e5b8a649dba8d48a934fda4fc55beeb",
+      "bytes": 7288,
+      "sha256": "eaf60feacb67ad518bd9cdba68f0951727d777a98ce3b0da6a536dd369890f75"
+    },
+    {
+      "path": ".git/refs/heads/main",
+      "bytes": 41,
+      "sha256": "67135662a38076b24e3acb0871d843c2ce5100369191452f6679ad6afd1bd4a2"
+    },
+    {
+      "path": ".git/refs/heads/orchestrator",
+      "bytes": 41,
+      "sha256": "a5896b84b3307cf01cb0a6bb9e6a761d3e06c59e7094175145d773e40823a646"
+    },
+    {
+      "path": ".git/refs/remotes/origin/main",
+      "bytes": 41,
+      "sha256": "67135662a38076b24e3acb0871d843c2ce5100369191452f6679ad6afd1bd4a2"
+    },
+    {
+      "path": ".git/refs/remotes/origin/orchestrator",
+      "bytes": 41,
+      "sha256": "a5896b84b3307cf01cb0a6bb9e6a761d3e06c59e7094175145d773e40823a646"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 280,
+      "sha256": "47010e2c170b406a8436168cfab982d57f34499f97875dad71b9ec06dc1b413a"
+    },
+    {
+      "path": "backend/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/analyst.py",
+      "bytes": 27832,
+      "sha256": "501207b632489a654b75604c0d41a71e19aa194f4651b5ca5a41ab2c7d69f19d"
+    },
+    {
+      "path": "backend/app.py",
+      "bytes": 25434,
+      "sha256": "6f789e765ad3f0dec076408d191f3444ea569b1d4da58a31d4908384fe020d4b"
+    },
+    {
+      "path": "backend/calculation_cache.py",
+      "bytes": 1509,
+      "sha256": "73b21b833bcabce1bc0a60c0eaa40304893ba3c34260c185a44c3bb4ecb3c882"
+    },
+    {
+      "path": "backend/calculations.py",
+      "bytes": 6828,
+      "sha256": "04d05543739aa90beb8f2c2786ebfa519c096afea6c9892960230960b0ec77ef"
+    },
+    {
+      "path": "backend/funding_plan.py",
+      "bytes": 13565,
+      "sha256": "e7e6f9e26cceed543c1a20e7ac08af3977a7c5659921a07c5897a19df668298c"
+    },
+    {
+      "path": "backend/funding_scenario.py",
+      "bytes": 4916,
+      "sha256": "55560288c8e302853dca08a37ab5a4e492de7d2b32d0d0daf4c8a94463590936"
+    },
+    {
+      "path": "backend/fx_market.py",
+      "bytes": 6858,
+      "sha256": "092bda91477b95570522b1b95eba4722aa7500cd22dc664c37aae6cb2089195e"
+    },
+    {
+      "path": "backend/fx_scenarios.py",
+      "bytes": 22920,
+      "sha256": "461d4895b85c5b5a15b4def1267d06b1f8c2bf7a9f0699082059a7397fe2ccc1"
+    },
+    {
+      "path": "backend/liquidity_metrics.py",
+      "bytes": 3482,
+      "sha256": "5484b64c370a30c787065fba457140b5f024874c72a97cf4456ab62cd2bdb031"
+    },
+    {
+      "path": "backend/model_context.py",
+      "bytes": 4474,
+      "sha256": "249b344c2dddc6e40b5f5e4e4ca6107b3ff990b3489d1afe648e267880b4382e"
+    },
+    {
+      "path": "backend/orchestrator.py",
+      "bytes": 5462,
+      "sha256": "b530ea1d5b38ab9df1dbdee2fb6eebcc8b453047d441bae5152688d4291bf99c"
+    },
+    {
+      "path": "backend/prompts/fx_analyst.md",
+      "bytes": 14770,
+      "sha256": "ad8b2cf2410e6928daf03324b42258f15bc21629e19f61a70436cbd2bd3a3021"
+    },
+    {
+      "path": "backend/recommended_action.py",
+      "bytes": 3315,
+      "sha256": "1ec676578e791fd4e18311894fa73b93e64963e25de0c7c6121531ce841dcaa7"
+    },
+    {
+      "path": "backend/seed.py",
+      "bytes": 6004,
+      "sha256": "a0d89f8f98d8c2038abfe7ed42b946175523ecf78d335d891b1eb0d402915480"
+    },
+    {
+      "path": "backend/simulation_inputs.py",
+      "bytes": 10831,
+      "sha256": "e8b7a66374b722936559745c7897eb35ae3bd6c647d21b173c4928063f5a76fb"
+    },
+    {
+      "path": "backend/synthesize_fx.py",
+      "bytes": 11258,
+      "sha256": "ec75045639b4ed5200693826fb3fcb6bb189e8c14a024cc79d61a25994fc3b8d"
+    },
+    {
+      "path": "daily liquidity sheet sample.jpg",
+      "bytes": 3492244,
+      "sha256": "76d0ce5da6f6b49443e2d54eecb32f29b099d3aa0dc512e5fb7b3793295d6380"
+    },
+    {
+      "path": "docker-compose.yml",
+      "bytes": 719,
+      "sha256": "a0e2cdee5402c7ee829daf5b1621c6156c9badeceb27165a7f1c059463279ffc"
+    },
+    {
+      "path": "docs/fx-simulation.md",
+      "bytes": 7506,
+      "sha256": "d2653cec28cce37af6cd9a2f844b3fe834992278ad172ea1c8fcf7ada722bb6d"
+    },
+    {
+      "path": "frontend/index.html",
+      "bytes": 351,
+      "sha256": "8c6be64caeabcf44d69b31c23d844d95e6c19eda502ec4e42635c563327284a4"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "bytes": 38589,
+      "sha256": "2e9bb99af6065a2d63e846fd18613312d9ce20038c6bebd40cf628c825656b71"
+    },
+    {
+      "path": "frontend/package.json",
+      "bytes": 342,
+      "sha256": "519df0216aa9a8fc4a3c48b6e87633334869371b207012ca40f7a27bd2be72aa"
+    },
+    {
+      "path": "frontend/src/actionDisplay.ts",
+      "bytes": 3742,
+      "sha256": "28c055c0c35bd3c71f50c6703cf3fa8ac7cf69615b63406063ea0129d28431c0"
+    },
+    {
+      "path": "frontend/src/analyst.css",
+      "bytes": 1580,
+      "sha256": "e7acbfaadd4552c595b6ffa6c5b544b2abb6c70b37c8ae4569912b9594a8c927"
+    },
+    {
+      "path": "frontend/src/liquidity-metrics.css",
+      "bytes": 3510,
+      "sha256": "99288dbad5696bd25dc5db11ac3781128f2a94ea4e6ffb882db9be05ecbe7b06"
+    },
+    {
+      "path": "frontend/src/LiquidityMetrics.tsx",
+      "bytes": 3909,
+      "sha256": "4a08a11ee0b595a9a1a5cd700c5daffa11d0af513e8898b78b79042a72647053"
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "bytes": 17301,
+      "sha256": "0d2e65b944c746998a40366b63ac3f563a41d742f4a4031cf33dce5da0e29b3d"
+    },
+    {
+      "path": "frontend/src/overview.css",
+      "bytes": 2605,
+      "sha256": "23e7801e3e0231e0e7fdc4c982e7d91f477660c889af58fa48ff5906ed28355b"
+    },
+    {
+      "path": "frontend/src/RecommendedAction.tsx",
+      "bytes": 735,
+      "sha256": "3fceb7e851f0ba056fa4566e05d22994336d589583aadb89875c91430f628f90"
+    },
+    {
+      "path": "frontend/src/reviewNotes.ts",
+      "bytes": 451,
+      "sha256": "c3f327f23cc5a83e3c206514d8e9f716ebb1877911c0f7dda07fe24bec3b55d1"
+    },
+    {
+      "path": "frontend/src/SoundControl.tsx",
+      "bytes": 4198,
+      "sha256": "7d74164826df65739b9f8a8e6292ff6d6347d2aaa8de7fd3599e6f2435840a34"
+    },
+    {
+      "path": "frontend/src/sounds.css",
+      "bytes": 1884,
+      "sha256": "f46b1ebe3e3716b582b84fd51e642ade72233130c6110b452687e590607e2795"
+    },
+    {
+      "path": "frontend/src/sounds.ts",
+      "bytes": 3351,
+      "sha256": "0303804b6a5bf69aaa47299b92f380c4e088d5085c3b83bae22187cb8ab50cba"
+    },
+    {
+      "path": "frontend/src/styles.css",
+      "bytes": 14497,
+      "sha256": "b14439fbbc6f8e89beecb119f9fc7744035556cfcdc76fbb85dd9c1330dbe4f0"
+    },
+    {
+      "path": "frontend/tests/recommendedAction.test.ts",
+      "bytes": 5165,
+      "sha256": "7084cb8ad7c1e6e91e6d3103f86fde0e83f3c743259a1780309e7191dbcc9d3f"
+    },
+    {
+      "path": "frontend/tests/reviewNotes.test.mjs",
+      "bytes": 1533,
+      "sha256": "9e5c61f2d65cb17da696560dfbca87396c58d6b0ad87886c194bb96d86a4af99"
+    },
+    {
+      "path": "frontend/tests/sounds.test.ts",
+      "bytes": 1357,
+      "sha256": "3bf604a34df56da47672ee6e98ce7c9cd8b883fda57dea7954645da21574812b"
+    },
+    {
+      "path": "frontend/tsconfig.json",
+      "bytes": 308,
+      "sha256": "28da5714c74d8afb4bcd6a5047938961676d3dc192f0c31505960d75b9ffc38d"
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "bytes": 117,
+      "sha256": "e0648882b513a4b4d4f4e228be88d0ff7abe865ce32dde9708083ab4549c19cf"
+    },
+    {
+      "path": "JN Bank Investment Policy Updated  Mar 2024.pdf",
+      "bytes": 718585,
+      "sha256": "90f0b48fcdea5146c2c16d9b3a33b886faa848f81de941a07394c564f1804e70"
+    },
+    {
+      "path": "jn-logo.png",
+      "bytes": 104307,
+      "sha256": "361ef64fc2b797aab0bbd6e9d184ba739280e478a2e9c828433ae337f4e0d441"
+    },
+    {
+      "path": "NEW_MACHINE_SETUP.md",
+      "bytes": 9935,
+      "sha256": "67539f5ddd9b26e8483926998e874846154874c932b141257d4cab98cc55a0c3"
+    },
+    {
+      "path": "policies/demo-rules.json",
+      "bytes": 577,
+      "sha256": "4edaf71c608ff951b9b57a8961e6a175b72524f2a307ccf29b7111f0bfe99b7f"
+    },
+    {
+      "path": "PROJECT_HANDOVER.md",
+      "bytes": 12570,
+      "sha256": "69a9c46e2a861a1185d069a40c93a23470cebffd605da1a9b0494d8e8a84c6a3"
+    },
+    {
+      "path": "README.md",
+      "bytes": 29404,
+      "sha256": "d4f2dc3141e83d0261f2d27e1cd028dc9a8293f82f3ad1c0e4c5d3588a8bb63c"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 89,
+      "sha256": "235c6b226b4ceee55f4458c6f86f7861903cdf7d275e8fc0535b5be9986b2ea9"
+    },
+    {
+      "path": "runtime/action_preview.py",
+      "bytes": 2627,
+      "sha256": "7ee67f9238e6a768c1adc103d8fd241becece30b6d264c839053a8bb6fb36bbb"
+    },
+    {
+      "path": "runtime/analyst-smoke.json",
+      "bytes": 106162,
+      "sha256": "3903493310f69c3dcbd5f2089083325694ab187013784c05d640d58e8d0e80db"
+    },
+    {
+      "path": "runtime/audit.sqlite",
+      "bytes": 10530816,
+      "sha256": "acbd886b25fb2e4790bf3d97401bfd461d4360cc55dfae52c9a627f933befd54"
+    },
+    {
+      "path": "runtime/experiments/funding-20261027-144258-497766/manifest.json",
+      "bytes": 5537,
+      "sha256": "27057e39a39c00d647eeff037e73725a9840cd4ad16d8c6f53ede10d1987d289"
+    },
+    {
+      "path": "runtime/experiments/funding-20261027-144258-497766/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/experiments/fx-extension-20261028-122458-048505/before/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/experiments/fx-extension-20261028-122458-048505/before/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/experiments/fx-extension-20261028-122458-048505/before/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/experiments/fx-extension-20261028-122458-048505/FX_Simulation.xlsx",
+      "bytes": 21496,
+      "sha256": "22e61106b27bd494cc91dd0b9d50f6db151a30de84c4abc48ae9b98b8b7dda60"
+    },
+    {
+      "path": "runtime/experiments/fx-extension-20261028-122458-048505/manifest.json",
+      "bytes": 1462,
+      "sha256": "067b69516cb7e12506239c758375f77935d634137791dba6013b67c31cd3f17d"
+    },
+    {
+      "path": "runtime/experiments/prepare_usd_loan_case.py",
+      "bytes": 5792,
+      "sha256": "e45b2d4fa76278ef26008159d77bbcbbdc41dbb0805ea9d91054154694414e0f"
+    },
+    {
+      "path": "runtime/experiments/usd-loan-case-20261027-164057-372263/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "f7b409101f2aab5f37ebd6d488d258d91107e2831857eaa0bbc511d846228511"
+    },
+    {
+      "path": "runtime/experiments/usd-loan-case-20261027-164057-372263/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/experiments/usd-loan-case-20261027-164057-372263/manifest.json",
+      "bytes": 31785,
+      "sha256": "d8ae1105bf766b2b4063e354a96fd8aa9aa95816314368bd6e539495305b7723"
+    },
+    {
+      "path": "runtime/experiments/usd-loan-case-20261027-164057-372263/staged/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/experiments/usd-loan-case-20261027-164057-372263/staged/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/experiments/usd-loan-case-20261027-164057-372263/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/funding-experiment-notes.md",
+      "bytes": 2805,
+      "sha256": "62418f9acf12eb985ebf1d901e84bc0c2b35bc753271d0f740155109db5db96d"
+    },
+    {
+      "path": "runtime/funding-experiment-result.json",
+      "bytes": 11223,
+      "sha256": "c198be509ed1821334257c9629128ee01624ff3396fa17c210ff03f1b9fb6aea"
+    },
+    {
+      "path": "runtime/funding-plan-tool-result.json",
+      "bytes": 9363,
+      "sha256": "ef4d69ae47af76130f839db491be1095ac99a7205b3a6639f6dc9e97cb032675"
+    },
+    {
+      "path": "runtime/hybrid-orchestrator-live-result-2.json",
+      "bytes": 422962,
+      "sha256": "8c13209c5f3fec5b45a520221cf78ab7f2dbd3cd11022137d08d12a5746d7afd"
+    },
+    {
+      "path": "runtime/hybrid-orchestrator-live-result.json",
+      "bytes": 419873,
+      "sha256": "95cadfa7b54f2d09212a6200359bc20593c636bb95517fbcd4751c14a07d53cf"
+    },
+    {
+      "path": "runtime/investigation-first-latest-result.json",
+      "bytes": 362971,
+      "sha256": "47694508fe3187ae2a2642b8db9e21c26346d4b25d982b19c49e06c8c44c35b1"
+    },
+    {
+      "path": "runtime/investigation-first-live-result.json",
+      "bytes": 27434,
+      "sha256": "dc69cf74d92ce6ffaf395cc68874de5ab5f60a0d28a7bae7094237b21b99f3c6"
+    },
+    {
+      "path": "runtime/investigation-stage-experiment.json",
+      "bytes": 163319,
+      "sha256": "6b32e8dc1c125998b6d58a23ab33b9299205c6707201f607db4ec08b3c4fc225"
+    },
+    {
+      "path": "runtime/last-manual-run-request.json",
+      "bytes": 91,
+      "sha256": "e0ab400841188e86460b47be3e29d66f17c484e47bad0a3a54c5b4463f0f119e"
+    },
+    {
+      "path": "runtime/scoped-review-live-result.json",
+      "bytes": 400923,
+      "sha256": "332ec1e4da28bb04496e188b45cdcbbcca551c68c11d488ea95f7c14d932199f"
+    },
+    {
+      "path": "runtime/simple-workflow-latest-result.json",
+      "bytes": 296183,
+      "sha256": "e6a683377750b3c418e2c66b1883c70d45d25f3770b01c830e3ac17529f53bf7"
+    },
+    {
+      "path": "runtime/simple-workflow-live-result.json",
+      "bytes": 282023,
+      "sha256": "9603632d54885a7a39c5239f574b700d14fd6811c20ab41fe66f36a6a34c25f4"
+    },
+    {
+      "path": "runtime/snapshots/026f7f8be9834b408a258a26122f3377/analysis.json",
+      "bytes": 18867,
+      "sha256": "b3e63c05ad45d02c72dc4c90b73d5656f3afe5fa8ff195eab6a6b4ca0bb29caf"
+    },
+    {
+      "path": "runtime/snapshots/026f7f8be9834b408a258a26122f3377/Bank_Balances.xlsx",
+      "bytes": 9687,
+      "sha256": "c6907724eef481db5ab2650a6518f1c7633e9feb55ffb7bd68240d3c7ae17718"
+    },
+    {
+      "path": "runtime/snapshots/026f7f8be9834b408a258a26122f3377/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/026f7f8be9834b408a258a26122f3377/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/026f7f8be9834b408a258a26122f3377/Weekly_Disbursements.xlsx",
+      "bytes": 8697,
+      "sha256": "19e6f42247039d7212020f4e4cd092308020a96db4c4d40b5b5e8d1f61589eab"
+    },
+    {
+      "path": "runtime/snapshots/0af89372e8a9448986272d355c2dcf05/analysis.json",
+      "bytes": 296183,
+      "sha256": "e6a683377750b3c418e2c66b1883c70d45d25f3770b01c830e3ac17529f53bf7"
+    },
+    {
+      "path": "runtime/snapshots/0af89372e8a9448986272d355c2dcf05/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/0af89372e8a9448986272d355c2dcf05/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/0af89372e8a9448986272d355c2dcf05/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/0af89372e8a9448986272d355c2dcf05/fx_analyst.md",
+      "bytes": 11636,
+      "sha256": "c42cff82d4341daf844f996391554cb0a2ca6282057b13fe22a9509c27c93a2e"
+    },
+    {
+      "path": "runtime/snapshots/0af89372e8a9448986272d355c2dcf05/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/0eeb4559297746a4b7795236c2402da7/analysis.json",
+      "bytes": 422962,
+      "sha256": "8c13209c5f3fec5b45a520221cf78ab7f2dbd3cd11022137d08d12a5746d7afd"
+    },
+    {
+      "path": "runtime/snapshots/0eeb4559297746a4b7795236c2402da7/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/0eeb4559297746a4b7795236c2402da7/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/0eeb4559297746a4b7795236c2402da7/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/0eeb4559297746a4b7795236c2402da7/fx_analyst.md",
+      "bytes": 11861,
+      "sha256": "fb702b5d36f6a522b8d65c879035ee064c3410d1c5e5ca405bfbae3d8c048a1d"
+    },
+    {
+      "path": "runtime/snapshots/0eeb4559297746a4b7795236c2402da7/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/1111cd33721048348b57eb005a51284b/analysis.json",
+      "bytes": 421201,
+      "sha256": "7db9827be27376afc3d7ca24864561308ae1f778bd168ace6c637d7a2ad072da"
+    },
+    {
+      "path": "runtime/snapshots/1111cd33721048348b57eb005a51284b/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/1111cd33721048348b57eb005a51284b/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/1111cd33721048348b57eb005a51284b/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/1111cd33721048348b57eb005a51284b/fx_analyst.md",
+      "bytes": 14197,
+      "sha256": "3cbb042e44819e01569f9c9d9904003660b8c05211c7328e8583e254465919c5"
+    },
+    {
+      "path": "runtime/snapshots/1111cd33721048348b57eb005a51284b/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/12736b3bcaee40c28c422f3ce5aa79be/analysis.json",
+      "bytes": 142041,
+      "sha256": "d7e6298888ef63c69552d809702d348e75bc628b5a6d0ebcb91addbfba987ed7"
+    },
+    {
+      "path": "runtime/snapshots/12736b3bcaee40c28c422f3ce5aa79be/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/12736b3bcaee40c28c422f3ce5aa79be/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/12736b3bcaee40c28c422f3ce5aa79be/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/12736b3bcaee40c28c422f3ce5aa79be/fx_analyst.md",
+      "bytes": 5392,
+      "sha256": "7db6fb531c0462024c5d1d207c79ad493bf05bc300fc24adc248c351591f72d6"
+    },
+    {
+      "path": "runtime/snapshots/12736b3bcaee40c28c422f3ce5aa79be/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/14255f5e13a54fb4b93d6d5d0f17468c/analysis.json",
+      "bytes": 17101,
+      "sha256": "f7d57e3196103a1bc09b6910e9ff73e6cb88c3eef50ce1d5bbe61ed9c08c3cba"
+    },
+    {
+      "path": "runtime/snapshots/14255f5e13a54fb4b93d6d5d0f17468c/Bank_Balances.xlsx",
+      "bytes": 9685,
+      "sha256": "e94a4c2cbc610356a8ace4c4cbef14082e345cea45f5a6a913a8785e79ef4cc0"
+    },
+    {
+      "path": "runtime/snapshots/14255f5e13a54fb4b93d6d5d0f17468c/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/14255f5e13a54fb4b93d6d5d0f17468c/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/14255f5e13a54fb4b93d6d5d0f17468c/Weekly_Disbursements.xlsx",
+      "bytes": 8697,
+      "sha256": "19e6f42247039d7212020f4e4cd092308020a96db4c4d40b5b5e8d1f61589eab"
+    },
+    {
+      "path": "runtime/snapshots/1838a6629d0a4d199a3d495f22cfdd1a/analysis.json",
+      "bytes": 142013,
+      "sha256": "1224e39922d139b8c0d634c8fa428b5086037f9ff8112b2dd1a16f856713f0eb"
+    },
+    {
+      "path": "runtime/snapshots/1838a6629d0a4d199a3d495f22cfdd1a/Bank_Balances.xlsx",
+      "bytes": 16631,
+      "sha256": "c9a573cbd182f1b6788ab6fa69bd730c027018dbc0be70ca2fbda42507b65e85"
+    },
+    {
+      "path": "runtime/snapshots/1838a6629d0a4d199a3d495f22cfdd1a/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/1838a6629d0a4d199a3d495f22cfdd1a/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/1838a6629d0a4d199a3d495f22cfdd1a/fx_analyst.md",
+      "bytes": 7004,
+      "sha256": "a3ca7ed977d0597dc75a5a4c6d0dc57a9cf3bfca4cdb1c1e873a84c42deddcd2"
+    },
+    {
+      "path": "runtime/snapshots/1838a6629d0a4d199a3d495f22cfdd1a/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/198a6ffb5f124cbdbe4fd4d17de54ef8/analysis.json",
+      "bytes": 151623,
+      "sha256": "95bd5c679dcc3b48d616d84367e4a0abfd1f6460f5fa9c9a67b3676469826690"
+    },
+    {
+      "path": "runtime/snapshots/198a6ffb5f124cbdbe4fd4d17de54ef8/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/198a6ffb5f124cbdbe4fd4d17de54ef8/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/198a6ffb5f124cbdbe4fd4d17de54ef8/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/198a6ffb5f124cbdbe4fd4d17de54ef8/fx_analyst.md",
+      "bytes": 4633,
+      "sha256": "222a6a868b59f0916e64712eadfd27eff6092fd40395870b3e9b91df433d9209"
+    },
+    {
+      "path": "runtime/snapshots/198a6ffb5f124cbdbe4fd4d17de54ef8/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/1e587072a6984cb1a1dc48c1954d4b7e/analysis.json",
+      "bytes": 18853,
+      "sha256": "ba5a1b35e5b6e7f669783a7b33d4e9c41a976b530cb6802106515934cb84f3f9"
+    },
+    {
+      "path": "runtime/snapshots/1e587072a6984cb1a1dc48c1954d4b7e/Bank_Balances.xlsx",
+      "bytes": 14346,
+      "sha256": "1bf8d1d569f1a469119237e8c8a14d075965ad4e8b9a524b123b3dee80165291"
+    },
+    {
+      "path": "runtime/snapshots/1e587072a6984cb1a1dc48c1954d4b7e/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/1e587072a6984cb1a1dc48c1954d4b7e/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/1e587072a6984cb1a1dc48c1954d4b7e/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/20802c65a4094545a2cda5bac3bb2239/analysis.json",
+      "bytes": 135347,
+      "sha256": "26eabe38a619a625a17af88b94269f8b675990ef65d6ecd08fa410defdf53655"
+    },
+    {
+      "path": "runtime/snapshots/20802c65a4094545a2cda5bac3bb2239/Bank_Balances.xlsx",
+      "bytes": 16626,
+      "sha256": "473ae7ac31cbf542b24e830dde780fa2efa050da299bb5eb03dacdca7d33a283"
+    },
+    {
+      "path": "runtime/snapshots/20802c65a4094545a2cda5bac3bb2239/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/20802c65a4094545a2cda5bac3bb2239/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/20802c65a4094545a2cda5bac3bb2239/fx_analyst.md",
+      "bytes": 7004,
+      "sha256": "a3ca7ed977d0597dc75a5a4c6d0dc57a9cf3bfca4cdb1c1e873a84c42deddcd2"
+    },
+    {
+      "path": "runtime/snapshots/20802c65a4094545a2cda5bac3bb2239/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/2149bfec7941459bad521d9f89f0a525/Bank_Balances.xlsx",
+      "bytes": 11527,
+      "sha256": "b9ef66d1716215a5bdd0bb64b491fef343745213ca74d3bea3a059d93172c4fe"
+    },
+    {
+      "path": "runtime/snapshots/2149bfec7941459bad521d9f89f0a525/Daily_Rate_Sheet.xlsx",
+      "bytes": 6845,
+      "sha256": "d5cf67b8985f18d3bec00767364ebda85d12fc86f9c75be46ef8cecc3c65b410"
+    },
+    {
+      "path": "runtime/snapshots/2149bfec7941459bad521d9f89f0a525/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/2149bfec7941459bad521d9f89f0a525/fx_analyst.md",
+      "bytes": 12233,
+      "sha256": "f408b569257329f5211c92d486bd417893d376376210a9af744d0f96b64053f6"
+    },
+    {
+      "path": "runtime/snapshots/2149bfec7941459bad521d9f89f0a525/Weekly_Disbursements.xlsx",
+      "bytes": 8771,
+      "sha256": "997eb4a050498f229631583476018fe061b6b33d0a4c0b9c5f364c4f274edd8b"
+    },
+    {
+      "path": "runtime/snapshots/263b731bd5b14807aa679274caffae83/analysis.json",
+      "bytes": 424006,
+      "sha256": "9de4e83e75a03f0a71ccfb89d38443d8407f23ef94abcde7c1917b2f15802f73"
+    },
+    {
+      "path": "runtime/snapshots/263b731bd5b14807aa679274caffae83/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/263b731bd5b14807aa679274caffae83/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/263b731bd5b14807aa679274caffae83/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/263b731bd5b14807aa679274caffae83/fx_analyst.md",
+      "bytes": 11861,
+      "sha256": "fb702b5d36f6a522b8d65c879035ee064c3410d1c5e5ca405bfbae3d8c048a1d"
+    },
+    {
+      "path": "runtime/snapshots/263b731bd5b14807aa679274caffae83/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/27f1e32333e0453e9317a0e8a14e9851/analysis.json",
+      "bytes": 447096,
+      "sha256": "576c65d44ddfe0387f0d84a521f9e99115d9b743b9bd1b5cddae35dfafff2a75"
+    },
+    {
+      "path": "runtime/snapshots/27f1e32333e0453e9317a0e8a14e9851/Bank_Balances.xlsx",
+      "bytes": 16622,
+      "sha256": "d0ca4835cc9c3d53b8f9ae3bfe103549e8a26527a7f9daa9c3a4c7c556eb7b41"
+    },
+    {
+      "path": "runtime/snapshots/27f1e32333e0453e9317a0e8a14e9851/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/27f1e32333e0453e9317a0e8a14e9851/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/27f1e32333e0453e9317a0e8a14e9851/fx_analyst.md",
+      "bytes": 11612,
+      "sha256": "53f63238dc0c24ef935c162a4a91269c78c6b23fd6d6d7739cd827b73c67a8ee"
+    },
+    {
+      "path": "runtime/snapshots/27f1e32333e0453e9317a0e8a14e9851/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/2b275acf6cc141229b2192a42fd2fd1c/analysis.json",
+      "bytes": 212334,
+      "sha256": "af3dc49a0a0db1cd414d9df5d646d2a46f0139418450ef993398af184ca1102a"
+    },
+    {
+      "path": "runtime/snapshots/2b275acf6cc141229b2192a42fd2fd1c/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/2b275acf6cc141229b2192a42fd2fd1c/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/2b275acf6cc141229b2192a42fd2fd1c/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/2b275acf6cc141229b2192a42fd2fd1c/fx_analyst.md",
+      "bytes": 5691,
+      "sha256": "5a95ea64325e8cf6c189ff89d82d13164e8be3c3c5906d654667cb420dc1d78f"
+    },
+    {
+      "path": "runtime/snapshots/2b275acf6cc141229b2192a42fd2fd1c/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/2f8e8fa0a7e8467aa4fb678de48f41f1/analysis.json",
+      "bytes": 284536,
+      "sha256": "2a04add95d39d1953c5d922d960f8b6648e2cd1e9eee6b8c2a753060ea9bf250"
+    },
+    {
+      "path": "runtime/snapshots/2f8e8fa0a7e8467aa4fb678de48f41f1/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/2f8e8fa0a7e8467aa4fb678de48f41f1/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/2f8e8fa0a7e8467aa4fb678de48f41f1/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/2f8e8fa0a7e8467aa4fb678de48f41f1/fx_analyst.md",
+      "bytes": 11015,
+      "sha256": "eef26d11bc31c91990a07f90192fa1eded450a38b329d3bc9f0b9536fcb7dde0"
+    },
+    {
+      "path": "runtime/snapshots/2f8e8fa0a7e8467aa4fb678de48f41f1/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/2fac5be1ddd748a0b1e87a168113054e/analysis.json",
+      "bytes": 281889,
+      "sha256": "6ef37d0eb24797d778be8fcfc5e4638fa0a6d87c222b4fbd04893b65f0393929"
+    },
+    {
+      "path": "runtime/snapshots/2fac5be1ddd748a0b1e87a168113054e/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/2fac5be1ddd748a0b1e87a168113054e/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/2fac5be1ddd748a0b1e87a168113054e/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/2fac5be1ddd748a0b1e87a168113054e/fx_analyst.md",
+      "bytes": 11015,
+      "sha256": "eef26d11bc31c91990a07f90192fa1eded450a38b329d3bc9f0b9536fcb7dde0"
+    },
+    {
+      "path": "runtime/snapshots/2fac5be1ddd748a0b1e87a168113054e/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/3103b5a0c85b4be488f0f6933a02c030/analysis.json",
+      "bytes": 206268,
+      "sha256": "7c2418675e2851d4bcb433e1d365edede574c37a8be8f017c578516bb00a8e1a"
+    },
+    {
+      "path": "runtime/snapshots/3103b5a0c85b4be488f0f6933a02c030/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/3103b5a0c85b4be488f0f6933a02c030/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/3103b5a0c85b4be488f0f6933a02c030/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/3103b5a0c85b4be488f0f6933a02c030/fx_analyst.md",
+      "bytes": 5363,
+      "sha256": "621626ef74135f44ba92e0c602c79638d59ab9c6ed3f13057e7219b1f5dbc56f"
+    },
+    {
+      "path": "runtime/snapshots/3103b5a0c85b4be488f0f6933a02c030/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/33eaf820019941889af549a8c30302e8/analysis.json",
+      "bytes": 20539,
+      "sha256": "b566e360ae0d6391cb1226ac2e7002792f2efe2aa6fcce5fedbbd44c46714a63"
+    },
+    {
+      "path": "runtime/snapshots/33eaf820019941889af549a8c30302e8/Bank_Balances.xlsx",
+      "bytes": 14344,
+      "sha256": "f0b3d85db81ec2e6784aca697adc16758aea7a8237751819354477a18987cabb"
+    },
+    {
+      "path": "runtime/snapshots/33eaf820019941889af549a8c30302e8/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/33eaf820019941889af549a8c30302e8/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/33eaf820019941889af549a8c30302e8/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/3d4961a78f014dcb806bd3fad5786b1f/analysis.json",
+      "bytes": 429001,
+      "sha256": "e0fa791798df2b71a1b89b91b5a4760f650c7882baddf808f06c4e87d012bf20"
+    },
+    {
+      "path": "runtime/snapshots/3d4961a78f014dcb806bd3fad5786b1f/Bank_Balances.xlsx",
+      "bytes": 16626,
+      "sha256": "473ae7ac31cbf542b24e830dde780fa2efa050da299bb5eb03dacdca7d33a283"
+    },
+    {
+      "path": "runtime/snapshots/3d4961a78f014dcb806bd3fad5786b1f/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/3d4961a78f014dcb806bd3fad5786b1f/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/3d4961a78f014dcb806bd3fad5786b1f/fx_analyst.md",
+      "bytes": 8239,
+      "sha256": "8b02ba509ead57ba47a5e8f988b27ac61167e8330d37026c06549d6e4038895f"
+    },
+    {
+      "path": "runtime/snapshots/3d4961a78f014dcb806bd3fad5786b1f/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/4a6831be5d67466abc82fbf8b3ceb8ad/analysis.json",
+      "bytes": 282829,
+      "sha256": "3576f79fa65cb52e0c81be13d7f397768663fc5bde792d1c194818bb79b7fe98"
+    },
+    {
+      "path": "runtime/snapshots/4a6831be5d67466abc82fbf8b3ceb8ad/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/4a6831be5d67466abc82fbf8b3ceb8ad/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/4a6831be5d67466abc82fbf8b3ceb8ad/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/4a6831be5d67466abc82fbf8b3ceb8ad/fx_analyst.md",
+      "bytes": 11612,
+      "sha256": "53f63238dc0c24ef935c162a4a91269c78c6b23fd6d6d7739cd827b73c67a8ee"
+    },
+    {
+      "path": "runtime/snapshots/4a6831be5d67466abc82fbf8b3ceb8ad/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/4d44bcdd7b6f46ee907d08f369df05c9/analysis.json",
+      "bytes": 282692,
+      "sha256": "139e9e18659650f5316530602ac9751f5bf4417043dfa512a9db2b5b582a139f"
+    },
+    {
+      "path": "runtime/snapshots/4d44bcdd7b6f46ee907d08f369df05c9/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/4d44bcdd7b6f46ee907d08f369df05c9/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/4d44bcdd7b6f46ee907d08f369df05c9/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/4d44bcdd7b6f46ee907d08f369df05c9/fx_analyst.md",
+      "bytes": 10858,
+      "sha256": "b1a449c4dc94e7ef6ba26c4460a4bc5209b795fa93a0eef716ca27aed05c7182"
+    },
+    {
+      "path": "runtime/snapshots/4d44bcdd7b6f46ee907d08f369df05c9/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/4d89a0e146c945e3ae27aa3f65add326/analysis.json",
+      "bytes": 281873,
+      "sha256": "43d2f1df50c61decb2abd627aeb4441a27372b66be7106516d086a3baf522dc1"
+    },
+    {
+      "path": "runtime/snapshots/4d89a0e146c945e3ae27aa3f65add326/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "f7b409101f2aab5f37ebd6d488d258d91107e2831857eaa0bbc511d846228511"
+    },
+    {
+      "path": "runtime/snapshots/4d89a0e146c945e3ae27aa3f65add326/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/4d89a0e146c945e3ae27aa3f65add326/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/4d89a0e146c945e3ae27aa3f65add326/fx_analyst.md",
+      "bytes": 10858,
+      "sha256": "b1a449c4dc94e7ef6ba26c4460a4bc5209b795fa93a0eef716ca27aed05c7182"
+    },
+    {
+      "path": "runtime/snapshots/4d89a0e146c945e3ae27aa3f65add326/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/58a6840abc1e4eb990080838060538ad/analysis.json",
+      "bytes": 18857,
+      "sha256": "a32393e86300338542b8e146ea3006467668e6237afaf7003bbd8f58757f1bfe"
+    },
+    {
+      "path": "runtime/snapshots/58a6840abc1e4eb990080838060538ad/Bank_Balances.xlsx",
+      "bytes": 9687,
+      "sha256": "c6907724eef481db5ab2650a6518f1c7633e9feb55ffb7bd68240d3c7ae17718"
+    },
+    {
+      "path": "runtime/snapshots/58a6840abc1e4eb990080838060538ad/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/58a6840abc1e4eb990080838060538ad/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/58a6840abc1e4eb990080838060538ad/Weekly_Disbursements.xlsx",
+      "bytes": 8697,
+      "sha256": "19e6f42247039d7212020f4e4cd092308020a96db4c4d40b5b5e8d1f61589eab"
+    },
+    {
+      "path": "runtime/snapshots/59fecc9dddb246b593f3d0341c6ecf98/analysis.json",
+      "bytes": 25105,
+      "sha256": "b978d8233d79d75bf163c23e1915b4753373148a5e9f6c7c6f1f2006f65219b0"
+    },
+    {
+      "path": "runtime/snapshots/59fecc9dddb246b593f3d0341c6ecf98/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/59fecc9dddb246b593f3d0341c6ecf98/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/59fecc9dddb246b593f3d0341c6ecf98/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/59fecc9dddb246b593f3d0341c6ecf98/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/5f683826722c44299a7794c4b87b47e2/analysis.json",
+      "bytes": 367400,
+      "sha256": "d470e5b09d3b287efc568a91ba72f63e22c5bff4dbf31d1c15e6776cc3380f15"
+    },
+    {
+      "path": "runtime/snapshots/5f683826722c44299a7794c4b87b47e2/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/5f683826722c44299a7794c4b87b47e2/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/5f683826722c44299a7794c4b87b47e2/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/5f683826722c44299a7794c4b87b47e2/fx_analyst.md",
+      "bytes": 11513,
+      "sha256": "c6ca2c404dece0cfc4f0b6a776434f2b2328d4f004fa02e3edd807a707cc5a00"
+    },
+    {
+      "path": "runtime/snapshots/5f683826722c44299a7794c4b87b47e2/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/61b65bdc46984fbda26793705bcbbf93/analysis.json",
+      "bytes": 276689,
+      "sha256": "07b156945e2fe2d1906ef6df388e5763f80ec731f709337feb2d215f9c98975b"
+    },
+    {
+      "path": "runtime/snapshots/61b65bdc46984fbda26793705bcbbf93/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "f7b409101f2aab5f37ebd6d488d258d91107e2831857eaa0bbc511d846228511"
+    },
+    {
+      "path": "runtime/snapshots/61b65bdc46984fbda26793705bcbbf93/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/61b65bdc46984fbda26793705bcbbf93/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/61b65bdc46984fbda26793705bcbbf93/fx_analyst.md",
+      "bytes": 11636,
+      "sha256": "c42cff82d4341daf844f996391554cb0a2ca6282057b13fe22a9509c27c93a2e"
+    },
+    {
+      "path": "runtime/snapshots/61b65bdc46984fbda26793705bcbbf93/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/685de6c0bd0747c5ad79b3a5f69f1fbb/analysis.json",
+      "bytes": 284190,
+      "sha256": "c6c0fd55f45bd196ea951400f22391e796b9bd0d8664ca931030308db8d12338"
+    },
+    {
+      "path": "runtime/snapshots/685de6c0bd0747c5ad79b3a5f69f1fbb/Bank_Balances.xlsx",
+      "bytes": 16626,
+      "sha256": "473ae7ac31cbf542b24e830dde780fa2efa050da299bb5eb03dacdca7d33a283"
+    },
+    {
+      "path": "runtime/snapshots/685de6c0bd0747c5ad79b3a5f69f1fbb/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/685de6c0bd0747c5ad79b3a5f69f1fbb/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/685de6c0bd0747c5ad79b3a5f69f1fbb/fx_analyst.md",
+      "bytes": 8233,
+      "sha256": "01cfd92394a0a045637fea1688d94e76d47a32459aa1b7a63ab8d2d0fc7181a0"
+    },
+    {
+      "path": "runtime/snapshots/685de6c0bd0747c5ad79b3a5f69f1fbb/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/70b7518d5b1044d5a65a51bce37918c8/analysis.json",
+      "bytes": 130095,
+      "sha256": "ed101a93704941d561859427ec3695211e8feb4e1856124a71a98b6bf874e726"
+    },
+    {
+      "path": "runtime/snapshots/70b7518d5b1044d5a65a51bce37918c8/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/70b7518d5b1044d5a65a51bce37918c8/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/70b7518d5b1044d5a65a51bce37918c8/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/70b7518d5b1044d5a65a51bce37918c8/fx_analyst.md",
+      "bytes": 5691,
+      "sha256": "5a95ea64325e8cf6c189ff89d82d13164e8be3c3c5906d654667cb420dc1d78f"
+    },
+    {
+      "path": "runtime/snapshots/70b7518d5b1044d5a65a51bce37918c8/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/7481998c6883482595b825c460f24e69/analysis.json",
+      "bytes": 362971,
+      "sha256": "47694508fe3187ae2a2642b8db9e21c26346d4b25d982b19c49e06c8c44c35b1"
+    },
+    {
+      "path": "runtime/snapshots/7481998c6883482595b825c460f24e69/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/7481998c6883482595b825c460f24e69/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/7481998c6883482595b825c460f24e69/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/7481998c6883482595b825c460f24e69/fx_analyst.md",
+      "bytes": 11513,
+      "sha256": "c6ca2c404dece0cfc4f0b6a776434f2b2328d4f004fa02e3edd807a707cc5a00"
+    },
+    {
+      "path": "runtime/snapshots/7481998c6883482595b825c460f24e69/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/7516aa1896a740e08b4805be6633ca7f/analysis.json",
+      "bytes": 203370,
+      "sha256": "322787bae8cdb4ff886b1246c761fc55158cd4d56f160b52e5ec4c13976a1162"
+    },
+    {
+      "path": "runtime/snapshots/7516aa1896a740e08b4805be6633ca7f/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/7516aa1896a740e08b4805be6633ca7f/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/7516aa1896a740e08b4805be6633ca7f/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/7516aa1896a740e08b4805be6633ca7f/fx_analyst.md",
+      "bytes": 5691,
+      "sha256": "5a95ea64325e8cf6c189ff89d82d13164e8be3c3c5906d654667cb420dc1d78f"
+    },
+    {
+      "path": "runtime/snapshots/7516aa1896a740e08b4805be6633ca7f/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/7bd6e34c03f04a22ae5260ff7b9b1805/analysis.json",
+      "bytes": 400923,
+      "sha256": "332ec1e4da28bb04496e188b45cdcbbcca551c68c11d488ea95f7c14d932199f"
+    },
+    {
+      "path": "runtime/snapshots/7bd6e34c03f04a22ae5260ff7b9b1805/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/7bd6e34c03f04a22ae5260ff7b9b1805/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/7bd6e34c03f04a22ae5260ff7b9b1805/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/7bd6e34c03f04a22ae5260ff7b9b1805/fx_analyst.md",
+      "bytes": 11861,
+      "sha256": "fb702b5d36f6a522b8d65c879035ee064c3410d1c5e5ca405bfbae3d8c048a1d"
+    },
+    {
+      "path": "runtime/snapshots/7bd6e34c03f04a22ae5260ff7b9b1805/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/7bdf68631e384d009594e93c2265bf02/analysis.json",
+      "bytes": 143091,
+      "sha256": "e3b648e6a189cdba97d05d396588fec9941a3a79d5a80ccc7dceb3143e64d4f8"
+    },
+    {
+      "path": "runtime/snapshots/7bdf68631e384d009594e93c2265bf02/Bank_Balances.xlsx",
+      "bytes": 16609,
+      "sha256": "9dd8a4643d83dc4ea7962399aaee97741031cfa7da22b1bc3ebe9595e90d59f2"
+    },
+    {
+      "path": "runtime/snapshots/7bdf68631e384d009594e93c2265bf02/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/7bdf68631e384d009594e93c2265bf02/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/7bdf68631e384d009594e93c2265bf02/fx_analyst.md",
+      "bytes": 7004,
+      "sha256": "a3ca7ed977d0597dc75a5a4c6d0dc57a9cf3bfca4cdb1c1e873a84c42deddcd2"
+    },
+    {
+      "path": "runtime/snapshots/7bdf68631e384d009594e93c2265bf02/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/7d3c40b1f79d4143a575c24ad938c5f9/analysis.json",
+      "bytes": 25044,
+      "sha256": "9fbc593761599ed8eed0dec23c40ecd1603deae80703c125afdd81e4762f2d8c"
+    },
+    {
+      "path": "runtime/snapshots/7d3c40b1f79d4143a575c24ad938c5f9/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/7d3c40b1f79d4143a575c24ad938c5f9/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/7d3c40b1f79d4143a575c24ad938c5f9/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/7d3c40b1f79d4143a575c24ad938c5f9/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/7f4a358f66f44051a805ec03b981a885/analysis.json",
+      "bytes": 279979,
+      "sha256": "53b650d8aba4d457a3bdda5004aaef0e2e1bd2f92751ea5529c7f66575caccac"
+    },
+    {
+      "path": "runtime/snapshots/7f4a358f66f44051a805ec03b981a885/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/7f4a358f66f44051a805ec03b981a885/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/7f4a358f66f44051a805ec03b981a885/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/7f4a358f66f44051a805ec03b981a885/fx_analyst.md",
+      "bytes": 10966,
+      "sha256": "eda7d3d3a76e2cacf4f9a813b5f9b635959ce0e14a264e5d9dff4197a92c6404"
+    },
+    {
+      "path": "runtime/snapshots/7f4a358f66f44051a805ec03b981a885/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/82ed59f2d006408cb0de6a859e8f4270/analysis.json",
+      "bytes": 282023,
+      "sha256": "dee38a894869ac614d7c120e1427b53f2383e2e00cee53562d6f966c46d954d3"
+    },
+    {
+      "path": "runtime/snapshots/82ed59f2d006408cb0de6a859e8f4270/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/82ed59f2d006408cb0de6a859e8f4270/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/82ed59f2d006408cb0de6a859e8f4270/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/82ed59f2d006408cb0de6a859e8f4270/fx_analyst.md",
+      "bytes": 11513,
+      "sha256": "c6ca2c404dece0cfc4f0b6a776434f2b2328d4f004fa02e3edd807a707cc5a00"
+    },
+    {
+      "path": "runtime/snapshots/82ed59f2d006408cb0de6a859e8f4270/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/86059661a41f4a57b91de1641a1f015f/analysis.json",
+      "bytes": 18869,
+      "sha256": "bc9003d6442682de62b1667ba588c0774a8872e63c9bb38636d70577f7c7a528"
+    },
+    {
+      "path": "runtime/snapshots/86059661a41f4a57b91de1641a1f015f/Bank_Balances.xlsx",
+      "bytes": 9687,
+      "sha256": "c6907724eef481db5ab2650a6518f1c7633e9feb55ffb7bd68240d3c7ae17718"
+    },
+    {
+      "path": "runtime/snapshots/86059661a41f4a57b91de1641a1f015f/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/86059661a41f4a57b91de1641a1f015f/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/86059661a41f4a57b91de1641a1f015f/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/87f3082286b84c71be79783a324859b1/analysis.json",
+      "bytes": 418389,
+      "sha256": "ea4c35f4bdb7110f4c4e4f1848b4ba5b3077763934b7da64d8ea7b07616b5aac"
+    },
+    {
+      "path": "runtime/snapshots/87f3082286b84c71be79783a324859b1/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/87f3082286b84c71be79783a324859b1/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/87f3082286b84c71be79783a324859b1/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/87f3082286b84c71be79783a324859b1/fx_analyst.md",
+      "bytes": 10966,
+      "sha256": "eda7d3d3a76e2cacf4f9a813b5f9b635959ce0e14a264e5d9dff4197a92c6404"
+    },
+    {
+      "path": "runtime/snapshots/87f3082286b84c71be79783a324859b1/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/8c946d6179be427fa0ba98143c4de6e5/analysis.json",
+      "bytes": 404619,
+      "sha256": "f3e845c5d247fd5b9b29e6b3032b046eb75a3ac33a154059cd74913cab40972c"
+    },
+    {
+      "path": "runtime/snapshots/8c946d6179be427fa0ba98143c4de6e5/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/8c946d6179be427fa0ba98143c4de6e5/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/8c946d6179be427fa0ba98143c4de6e5/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/8c946d6179be427fa0ba98143c4de6e5/fx_analyst.md",
+      "bytes": 11861,
+      "sha256": "fb702b5d36f6a522b8d65c879035ee064c3410d1c5e5ca405bfbae3d8c048a1d"
+    },
+    {
+      "path": "runtime/snapshots/8c946d6179be427fa0ba98143c4de6e5/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/908ff12684f0434d83138205eb15278e/analysis.json",
+      "bytes": 404835,
+      "sha256": "b7b955ff4214e4307743ef01abc04b812fa8b6af6affa3b7f72ddba737a219b2"
+    },
+    {
+      "path": "runtime/snapshots/908ff12684f0434d83138205eb15278e/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/908ff12684f0434d83138205eb15278e/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/908ff12684f0434d83138205eb15278e/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/908ff12684f0434d83138205eb15278e/fx_analyst.md",
+      "bytes": 11861,
+      "sha256": "fb702b5d36f6a522b8d65c879035ee064c3410d1c5e5ca405bfbae3d8c048a1d"
+    },
+    {
+      "path": "runtime/snapshots/908ff12684f0434d83138205eb15278e/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/909a2e0916a245bd954521e8bd1ceafa/analysis.json",
+      "bytes": 168475,
+      "sha256": "6c4dd3ef42f0b9c56bf37111c77eddc0a64a17d0547456bc3b6e06f0ec69f9af"
+    },
+    {
+      "path": "runtime/snapshots/909a2e0916a245bd954521e8bd1ceafa/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/909a2e0916a245bd954521e8bd1ceafa/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/909a2e0916a245bd954521e8bd1ceafa/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/909a2e0916a245bd954521e8bd1ceafa/fx_analyst.md",
+      "bytes": 4918,
+      "sha256": "3296bb1c52f6c7dfba305790fd300629cebe947dca236f0c0c082dcbd36a23fb"
+    },
+    {
+      "path": "runtime/snapshots/909a2e0916a245bd954521e8bd1ceafa/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/9530981af3d548b38dbed0e2e16c6f7d/analysis.json",
+      "bytes": 287120,
+      "sha256": "7f4cb26b486e6ed11d7e3605106684aa1dfd56e2447cafd934143c305d335944"
+    },
+    {
+      "path": "runtime/snapshots/9530981af3d548b38dbed0e2e16c6f7d/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/9530981af3d548b38dbed0e2e16c6f7d/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/9530981af3d548b38dbed0e2e16c6f7d/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/9530981af3d548b38dbed0e2e16c6f7d/fx_analyst.md",
+      "bytes": 11636,
+      "sha256": "c42cff82d4341daf844f996391554cb0a2ca6282057b13fe22a9509c27c93a2e"
+    },
+    {
+      "path": "runtime/snapshots/9530981af3d548b38dbed0e2e16c6f7d/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/a37fcfb29712455995052474d1a410e0/analysis.json",
+      "bytes": 418467,
+      "sha256": "a3f92bc6ecbd4c69a5c7061f8c715173052ebac51239593229a24054e4e7408b"
+    },
+    {
+      "path": "runtime/snapshots/a37fcfb29712455995052474d1a410e0/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/a37fcfb29712455995052474d1a410e0/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/a37fcfb29712455995052474d1a410e0/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/a37fcfb29712455995052474d1a410e0/fx_analyst.md",
+      "bytes": 10858,
+      "sha256": "b1a449c4dc94e7ef6ba26c4460a4bc5209b795fa93a0eef716ca27aed05c7182"
+    },
+    {
+      "path": "runtime/snapshots/a37fcfb29712455995052474d1a410e0/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/a695bfd7175d4159bb67a8647b1e6ed5/analysis.json",
+      "bytes": 20529,
+      "sha256": "d15f7434990f7f5c423a28d3f20c457f43c05bd7f3a8780a9dda21f767d69f0b"
+    },
+    {
+      "path": "runtime/snapshots/a695bfd7175d4159bb67a8647b1e6ed5/Bank_Balances.xlsx",
+      "bytes": 14344,
+      "sha256": "a9baf73233610200ea6fb5a0b68b4f9a216d83a5ecfb6721d6675a86efb8f977"
+    },
+    {
+      "path": "runtime/snapshots/a695bfd7175d4159bb67a8647b1e6ed5/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/a695bfd7175d4159bb67a8647b1e6ed5/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/a695bfd7175d4159bb67a8647b1e6ed5/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/abafd83221c74e4b816897ce89ebd31a/analysis.json",
+      "bytes": 199131,
+      "sha256": "65349dfcd9cd84d4fc57df52f57bd792d7ba933dbd3ee8dfe5d44d33da9b856c"
+    },
+    {
+      "path": "runtime/snapshots/abafd83221c74e4b816897ce89ebd31a/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/abafd83221c74e4b816897ce89ebd31a/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/abafd83221c74e4b816897ce89ebd31a/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/abafd83221c74e4b816897ce89ebd31a/fx_analyst.md",
+      "bytes": 5363,
+      "sha256": "621626ef74135f44ba92e0c602c79638d59ab9c6ed3f13057e7219b1f5dbc56f"
+    },
+    {
+      "path": "runtime/snapshots/abafd83221c74e4b816897ce89ebd31a/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/b9fecd7c728c4307a355b9b091a10c47/analysis.json",
+      "bytes": 213801,
+      "sha256": "242508f7eb7f800f3aa8bfadda4408f72808134aef6d14270c0b2a6655bb5053"
+    },
+    {
+      "path": "runtime/snapshots/b9fecd7c728c4307a355b9b091a10c47/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/b9fecd7c728c4307a355b9b091a10c47/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/b9fecd7c728c4307a355b9b091a10c47/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/b9fecd7c728c4307a355b9b091a10c47/fx_analyst.md",
+      "bytes": 7004,
+      "sha256": "a3ca7ed977d0597dc75a5a4c6d0dc57a9cf3bfca4cdb1c1e873a84c42deddcd2"
+    },
+    {
+      "path": "runtime/snapshots/b9fecd7c728c4307a355b9b091a10c47/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/ba68bea5b9a4474483fe4aa21140164b/analysis.json",
+      "bytes": 19159,
+      "sha256": "6db13dc71669edbb16cc22259e60000a90d2fea72e5ba979c99cbc7a1fdc66ee"
+    },
+    {
+      "path": "runtime/snapshots/ba68bea5b9a4474483fe4aa21140164b/Bank_Balances.xlsx",
+      "bytes": 14345,
+      "sha256": "bef81c655861111f652cf82fa4c95984f13b28e3f8666505e4b404e49334c1bb"
+    },
+    {
+      "path": "runtime/snapshots/ba68bea5b9a4474483fe4aa21140164b/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/ba68bea5b9a4474483fe4aa21140164b/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/ba68bea5b9a4474483fe4aa21140164b/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/ba80ea1e1b3a4c32b62fe1bc2cddeffb/analysis.json",
+      "bytes": 427335,
+      "sha256": "1fc18e71ff7c8e66c27650c583f75edfb52217f5ff54aa0d2fe0aed2bfb9b5a8"
+    },
+    {
+      "path": "runtime/snapshots/ba80ea1e1b3a4c32b62fe1bc2cddeffb/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/ba80ea1e1b3a4c32b62fe1bc2cddeffb/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/ba80ea1e1b3a4c32b62fe1bc2cddeffb/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/ba80ea1e1b3a4c32b62fe1bc2cddeffb/fx_analyst.md",
+      "bytes": 17872,
+      "sha256": "20deab018a1a3c890e58fad63d4f43b031bb121c9b2ff06a6c407383fa27ad22"
+    },
+    {
+      "path": "runtime/snapshots/ba80ea1e1b3a4c32b62fe1bc2cddeffb/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/c1ddc9d15e8641f780a33f4874b2abeb/Bank_Balances.xlsx",
+      "bytes": 11524,
+      "sha256": "443ad5c06292ca81d9e0d55cf2961648d2df298862efdc682f3d566e944ad84c"
+    },
+    {
+      "path": "runtime/snapshots/c1ddc9d15e8641f780a33f4874b2abeb/Daily_Rate_Sheet.xlsx",
+      "bytes": 6845,
+      "sha256": "b6e25085f8ac3b64708f8deb8d467bb9c9204d180235f8fb76087d705b4db622"
+    },
+    {
+      "path": "runtime/snapshots/c1ddc9d15e8641f780a33f4874b2abeb/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/c1ddc9d15e8641f780a33f4874b2abeb/fx_analyst.md",
+      "bytes": 12233,
+      "sha256": "f408b569257329f5211c92d486bd417893d376376210a9af744d0f96b64053f6"
+    },
+    {
+      "path": "runtime/snapshots/c1ddc9d15e8641f780a33f4874b2abeb/Weekly_Disbursements.xlsx",
+      "bytes": 8772,
+      "sha256": "028e92fc4f03e3f00aaee783db0d23899ba441c54688a9509e30b565c72e8184"
+    },
+    {
+      "path": "runtime/snapshots/c54b2e032b0247c69e436af06302a123/analysis.json",
+      "bytes": 129267,
+      "sha256": "e8a008d40d2e50f28def9126b96ea92c2382655592d1ddc06c4e4162f89e9807"
+    },
+    {
+      "path": "runtime/snapshots/c54b2e032b0247c69e436af06302a123/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/c54b2e032b0247c69e436af06302a123/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/c54b2e032b0247c69e436af06302a123/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/c54b2e032b0247c69e436af06302a123/fx_analyst.md",
+      "bytes": 11861,
+      "sha256": "fb702b5d36f6a522b8d65c879035ee064c3410d1c5e5ca405bfbae3d8c048a1d"
+    },
+    {
+      "path": "runtime/snapshots/c54b2e032b0247c69e436af06302a123/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/c54b92afc3a74b8883d9f5eee869dd8d/analysis.json",
+      "bytes": 442676,
+      "sha256": "475588470ec5c674cb6d2817d2eb266926d99a9eb7297f7132e6becbd25f41bb"
+    },
+    {
+      "path": "runtime/snapshots/c54b92afc3a74b8883d9f5eee869dd8d/Bank_Balances.xlsx",
+      "bytes": 16626,
+      "sha256": "473ae7ac31cbf542b24e830dde780fa2efa050da299bb5eb03dacdca7d33a283"
+    },
+    {
+      "path": "runtime/snapshots/c54b92afc3a74b8883d9f5eee869dd8d/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/c54b92afc3a74b8883d9f5eee869dd8d/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/c54b92afc3a74b8883d9f5eee869dd8d/fx_analyst.md",
+      "bytes": 10725,
+      "sha256": "2d2768d19586d00ce78ee4126e5e99bec3f383e472146c6ad23e3504b028711e"
+    },
+    {
+      "path": "runtime/snapshots/c54b92afc3a74b8883d9f5eee869dd8d/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/c8fee04b3b0b4ffa94b98773ea09654d/analysis.json",
+      "bytes": 272921,
+      "sha256": "e8d5ce9e76a412ae5912452572f3cd7a8b77281800060f9f997108e37a70f9fb"
+    },
+    {
+      "path": "runtime/snapshots/c8fee04b3b0b4ffa94b98773ea09654d/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "f7b409101f2aab5f37ebd6d488d258d91107e2831857eaa0bbc511d846228511"
+    },
+    {
+      "path": "runtime/snapshots/c8fee04b3b0b4ffa94b98773ea09654d/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/c8fee04b3b0b4ffa94b98773ea09654d/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/c8fee04b3b0b4ffa94b98773ea09654d/fx_analyst.md",
+      "bytes": 10858,
+      "sha256": "b1a449c4dc94e7ef6ba26c4460a4bc5209b795fa93a0eef716ca27aed05c7182"
+    },
+    {
+      "path": "runtime/snapshots/c8fee04b3b0b4ffa94b98773ea09654d/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/c99bc59731c2495b98b0578600a94f7a/analysis.json",
+      "bytes": 292167,
+      "sha256": "81415848e17d1e2e05b29b3d2b5dd4a800f9ac2fbc37a163f9fd56460f39c8e0"
+    },
+    {
+      "path": "runtime/snapshots/c99bc59731c2495b98b0578600a94f7a/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "66c812f37926ce3d7c3b87c44d126a225c2c19996ee05b84af57739f8edf0db5"
+    },
+    {
+      "path": "runtime/snapshots/c99bc59731c2495b98b0578600a94f7a/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/c99bc59731c2495b98b0578600a94f7a/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/c99bc59731c2495b98b0578600a94f7a/fx_analyst.md",
+      "bytes": 11612,
+      "sha256": "53f63238dc0c24ef935c162a4a91269c78c6b23fd6d6d7739cd827b73c67a8ee"
+    },
+    {
+      "path": "runtime/snapshots/c99bc59731c2495b98b0578600a94f7a/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/cb2b0a03136f4ad0835f055f93edbb44/analysis.json",
+      "bytes": 282023,
+      "sha256": "9603632d54885a7a39c5239f574b700d14fd6811c20ab41fe66f36a6a34c25f4"
+    },
+    {
+      "path": "runtime/snapshots/cb2b0a03136f4ad0835f055f93edbb44/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/cb2b0a03136f4ad0835f055f93edbb44/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/cb2b0a03136f4ad0835f055f93edbb44/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/cb2b0a03136f4ad0835f055f93edbb44/fx_analyst.md",
+      "bytes": 11636,
+      "sha256": "c42cff82d4341daf844f996391554cb0a2ca6282057b13fe22a9509c27c93a2e"
+    },
+    {
+      "path": "runtime/snapshots/cb2b0a03136f4ad0835f055f93edbb44/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/d2a4b141dd38402dbc6664f14e08282b/analysis.json",
+      "bytes": 426688,
+      "sha256": "e01c1f2734087e97080c21d261da4c25cf7c25d5dad76363e2ef1ee509a3a9e4"
+    },
+    {
+      "path": "runtime/snapshots/d2a4b141dd38402dbc6664f14e08282b/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/d2a4b141dd38402dbc6664f14e08282b/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/d2a4b141dd38402dbc6664f14e08282b/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/d2a4b141dd38402dbc6664f14e08282b/fx_analyst.md",
+      "bytes": 15803,
+      "sha256": "8daccad3cbf977b1e3356d2b4184b43b11421d493d5bed90235533e26564aa31"
+    },
+    {
+      "path": "runtime/snapshots/d2a4b141dd38402dbc6664f14e08282b/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/d35583bf298d4398b22142c27ce08aae/analysis.json",
+      "bytes": 18831,
+      "sha256": "d96d554594a314476d42d1241727424cc29517271a7092bd29acdccb1fd714ff"
+    },
+    {
+      "path": "runtime/snapshots/d35583bf298d4398b22142c27ce08aae/Bank_Balances.xlsx",
+      "bytes": 8892,
+      "sha256": "b1d3c0b418fdd5cea884c7ea7c3677ee2fb9f72fd0bc789e91e3651f0b0f4db3"
+    },
+    {
+      "path": "runtime/snapshots/d35583bf298d4398b22142c27ce08aae/Daily_Rate_Sheet.xlsx",
+      "bytes": 5973,
+      "sha256": "912e8d643d74da65b8aba7303fdb9cefeaa01fd9d0b3f9e1c2530aa68fb2cdd8"
+    },
+    {
+      "path": "runtime/snapshots/d35583bf298d4398b22142c27ce08aae/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/d35583bf298d4398b22142c27ce08aae/Weekly_Disbursements.xlsx",
+      "bytes": 7900,
+      "sha256": "6cff77aaa1d9e04f9711540c0e726b8f8e019139fe1455d677057196dfb68ba6"
+    },
+    {
+      "path": "runtime/snapshots/d9b11fe983274c658a81c916e1852c4e/analysis.json",
+      "bytes": 306603,
+      "sha256": "b53529b30255293d7b68b6003e0be990620bd3862511a07827771c225d0390ad"
+    },
+    {
+      "path": "runtime/snapshots/d9b11fe983274c658a81c916e1852c4e/Bank_Balances.xlsx",
+      "bytes": 16622,
+      "sha256": "d0ca4835cc9c3d53b8f9ae3bfe103549e8a26527a7f9daa9c3a4c7c556eb7b41"
+    },
+    {
+      "path": "runtime/snapshots/d9b11fe983274c658a81c916e1852c4e/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/d9b11fe983274c658a81c916e1852c4e/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/d9b11fe983274c658a81c916e1852c4e/fx_analyst.md",
+      "bytes": 10725,
+      "sha256": "2d2768d19586d00ce78ee4126e5e99bec3f383e472146c6ad23e3504b028711e"
+    },
+    {
+      "path": "runtime/snapshots/d9b11fe983274c658a81c916e1852c4e/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/d9be7ae3c551498280681ada8ba7f18d/analysis.json",
+      "bytes": 18916,
+      "sha256": "0422eba799cee27e993f70977329b49255826dc2a7141c740afe83510e3bf30f"
+    },
+    {
+      "path": "runtime/snapshots/d9be7ae3c551498280681ada8ba7f18d/Bank_Balances.xlsx",
+      "bytes": 14345,
+      "sha256": "bef81c655861111f652cf82fa4c95984f13b28e3f8666505e4b404e49334c1bb"
+    },
+    {
+      "path": "runtime/snapshots/d9be7ae3c551498280681ada8ba7f18d/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/d9be7ae3c551498280681ada8ba7f18d/demo-rules.json",
+      "bytes": 421,
+      "sha256": "5f5a8c3772ad189d57f2bfd35e70f7e1f456fc8ac7f83edcdbff5d7a4561b5fe"
+    },
+    {
+      "path": "runtime/snapshots/d9be7ae3c551498280681ada8ba7f18d/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/dae58942cf6a4104949bb432ec6d254d/analysis.json",
+      "bytes": 419873,
+      "sha256": "95cadfa7b54f2d09212a6200359bc20593c636bb95517fbcd4751c14a07d53cf"
+    },
+    {
+      "path": "runtime/snapshots/dae58942cf6a4104949bb432ec6d254d/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/dae58942cf6a4104949bb432ec6d254d/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/dae58942cf6a4104949bb432ec6d254d/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/dae58942cf6a4104949bb432ec6d254d/fx_analyst.md",
+      "bytes": 11457,
+      "sha256": "30169fd92da786690cccb7e8d4fc9b6266a3fbca3bf0489b14d1090776c8a88c"
+    },
+    {
+      "path": "runtime/snapshots/dae58942cf6a4104949bb432ec6d254d/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/e529e2cbe3fd4e14a79a48bf15952947/analysis.json",
+      "bytes": 286123,
+      "sha256": "31d9be9973d7d8ac959485e941cbda8567be0f753a7c7547121fa0dc6d57890e"
+    },
+    {
+      "path": "runtime/snapshots/e529e2cbe3fd4e14a79a48bf15952947/Bank_Balances.xlsx",
+      "bytes": 16622,
+      "sha256": "d0ca4835cc9c3d53b8f9ae3bfe103549e8a26527a7f9daa9c3a4c7c556eb7b41"
+    },
+    {
+      "path": "runtime/snapshots/e529e2cbe3fd4e14a79a48bf15952947/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/e529e2cbe3fd4e14a79a48bf15952947/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/e529e2cbe3fd4e14a79a48bf15952947/fx_analyst.md",
+      "bytes": 11612,
+      "sha256": "53f63238dc0c24ef935c162a4a91269c78c6b23fd6d6d7739cd827b73c67a8ee"
+    },
+    {
+      "path": "runtime/snapshots/e529e2cbe3fd4e14a79a48bf15952947/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/eb51dfcec6864a6abfa4c808ad17ad7f/analysis.json",
+      "bytes": 238285,
+      "sha256": "58ef4b5b0afc20710f99998850185b1c64aae9921eb870f214e83d9f7fd4ae2b"
+    },
+    {
+      "path": "runtime/snapshots/eb51dfcec6864a6abfa4c808ad17ad7f/Bank_Balances.xlsx",
+      "bytes": 16626,
+      "sha256": "473ae7ac31cbf542b24e830dde780fa2efa050da299bb5eb03dacdca7d33a283"
+    },
+    {
+      "path": "runtime/snapshots/eb51dfcec6864a6abfa4c808ad17ad7f/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/eb51dfcec6864a6abfa4c808ad17ad7f/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/eb51dfcec6864a6abfa4c808ad17ad7f/fx_analyst.md",
+      "bytes": 8233,
+      "sha256": "01cfd92394a0a045637fea1688d94e76d47a32459aa1b7a63ab8d2d0fc7181a0"
+    },
+    {
+      "path": "runtime/snapshots/eb51dfcec6864a6abfa4c808ad17ad7f/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/snapshots/eea019fec58d45b59eb23e7646106e9d/analysis.json",
+      "bytes": 290376,
+      "sha256": "b930adce13e63f352c6c84d49c92efc8b251d378265ffa243b7b29c9cabd48f9"
+    },
+    {
+      "path": "runtime/snapshots/eea019fec58d45b59eb23e7646106e9d/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "f7b409101f2aab5f37ebd6d488d258d91107e2831857eaa0bbc511d846228511"
+    },
+    {
+      "path": "runtime/snapshots/eea019fec58d45b59eb23e7646106e9d/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/eea019fec58d45b59eb23e7646106e9d/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/eea019fec58d45b59eb23e7646106e9d/fx_analyst.md",
+      "bytes": 10858,
+      "sha256": "b1a449c4dc94e7ef6ba26c4460a4bc5209b795fa93a0eef716ca27aed05c7182"
+    },
+    {
+      "path": "runtime/snapshots/eea019fec58d45b59eb23e7646106e9d/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/f12c5c2c894a4965a14c25b9fed29f47/analysis.json",
+      "bytes": 417813,
+      "sha256": "e22746152a212576839c78a837251c94d33134c32f8fe08e1fd52b672ad605a3"
+    },
+    {
+      "path": "runtime/snapshots/f12c5c2c894a4965a14c25b9fed29f47/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "runtime/snapshots/f12c5c2c894a4965a14c25b9fed29f47/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/f12c5c2c894a4965a14c25b9fed29f47/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/f12c5c2c894a4965a14c25b9fed29f47/fx_analyst.md",
+      "bytes": 11861,
+      "sha256": "fb702b5d36f6a522b8d65c879035ee064c3410d1c5e5ca405bfbae3d8c048a1d"
+    },
+    {
+      "path": "runtime/snapshots/f12c5c2c894a4965a14c25b9fed29f47/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/f9e29177b004463c856b8f21a405a135/analysis.json",
+      "bytes": 283041,
+      "sha256": "afdaa86a46b464e33529f4e4aeee86958707a010d7d28426f04fd1f33afd444e"
+    },
+    {
+      "path": "runtime/snapshots/f9e29177b004463c856b8f21a405a135/Bank_Balances.xlsx",
+      "bytes": 16623,
+      "sha256": "6456f8cf9673e406f55e7f989bc68712e690efba57a79b6f9bbc04ac691627a2"
+    },
+    {
+      "path": "runtime/snapshots/f9e29177b004463c856b8f21a405a135/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/f9e29177b004463c856b8f21a405a135/demo-rules.json",
+      "bytes": 592,
+      "sha256": "d9e273c9f5e3ffe4cba2167613d432065a133ec96861bd3e5f97615745aade7d"
+    },
+    {
+      "path": "runtime/snapshots/f9e29177b004463c856b8f21a405a135/fx_analyst.md",
+      "bytes": 10858,
+      "sha256": "b1a449c4dc94e7ef6ba26c4460a4bc5209b795fa93a0eef716ca27aed05c7182"
+    },
+    {
+      "path": "runtime/snapshots/f9e29177b004463c856b8f21a405a135/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "runtime/snapshots/fde1138404644b988b21c5062d48ab01/analysis.json",
+      "bytes": 224481,
+      "sha256": "ea362db597496146fb57203442e4eeacc6b993a551a2a45dec9d714bec31b252"
+    },
+    {
+      "path": "runtime/snapshots/fde1138404644b988b21c5062d48ab01/Bank_Balances.xlsx",
+      "bytes": 11460,
+      "sha256": "8291149272d7adc50e6577d80c7e1e710ed8d422c68665288551e72543659bdc"
+    },
+    {
+      "path": "runtime/snapshots/fde1138404644b988b21c5062d48ab01/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "runtime/snapshots/fde1138404644b988b21c5062d48ab01/demo-rules.json",
+      "bytes": 591,
+      "sha256": "5d6e193dbb55f5f451adb636ebc63caa98abdb54d67ee3ec6503524a536f7f7c"
+    },
+    {
+      "path": "runtime/snapshots/fde1138404644b988b21c5062d48ab01/fx_analyst.md",
+      "bytes": 4918,
+      "sha256": "3296bb1c52f6c7dfba305790fd300629cebe947dca236f0c0c082dcbd36a23fb"
+    },
+    {
+      "path": "runtime/snapshots/fde1138404644b988b21c5062d48ab01/Weekly_Disbursements.xlsx",
+      "bytes": 13058,
+      "sha256": "82dceed41f76b74944a94ba9189539f16842f90390243a4dddde70ed06f200cf"
+    },
+    {
+      "path": "runtime/strategist-v3-restart-result.json",
+      "bytes": 4188,
+      "sha256": "6920f6b496460598323e866668149292dc93a7616093ae6f3d0568de0b3cde66"
+    },
+    {
+      "path": "shared/Bank_Balances.xlsx",
+      "bytes": 13949,
+      "sha256": "1e20963632d003f024cdebf0a3257cbb56fb7ed1ee9e7932e472fa89443f2b2f"
+    },
+    {
+      "path": "shared/Daily_Rate_Sheet.xlsx",
+      "bytes": 6770,
+      "sha256": "d7025b3bc78f709d6361b74c50d851ad249f787f57f8f4a59f408ede19321ab6"
+    },
+    {
+      "path": "shared/FX_Simulation.xlsx",
+      "bytes": 21496,
+      "sha256": "22e61106b27bd494cc91dd0b9d50f6db151a30de84c4abc48ae9b98b8b7dda60"
+    },
+    {
+      "path": "shared/Weekly_Disbursements.xlsx",
+      "bytes": 9885,
+      "sha256": "5d0d0b228338e1b5a38c041cb6bdb539ff091cf0ffa31e694d43da62b1b3d4db"
+    },
+    {
+      "path": "start.cmd",
+      "bytes": 512,
+      "sha256": "0465def4ceabd595c06b6f02502c749bb8d67481a54d0e2d769ae2c4b8761eb6"
+    },
+    {
+      "path": "tests/check_live_pipeline.py",
+      "bytes": 1983,
+      "sha256": "da7c87f5eaabf0b7c8f53cc90cd2eef5762d271722c9fdf36ea594e65b258a7d"
+    },
+    {
+      "path": "tests/test_analyst.py",
+      "bytes": 25046,
+      "sha256": "73abb072aeeb66454b6131cbfa5071c76c51191d2ea912d3392e66f0cb644411"
+    },
+    {
+      "path": "tests/test_chat.py",
+      "bytes": 1899,
+      "sha256": "8f62255a9ad5ca8578a292609e2f32d404ac3b4279abd4f95cd1d6c6f89cba88"
+    },
+    {
+      "path": "tests/test_efficiency.py",
+      "bytes": 22682,
+      "sha256": "5ade27946f341e0185123ace489f57d9f1f1b8799d30aaa314d8dbc1f6c8d9eb"
+    },
+    {
+      "path": "tests/test_funding_plan.py",
+      "bytes": 8317,
+      "sha256": "cd3f4613978a14532d370dca99cf9791fa54653b816fdc592b85d80c37ef6507"
+    },
+    {
+      "path": "tests/test_fx_scenarios.py",
+      "bytes": 22337,
+      "sha256": "fe19cd81261136a77535c13a2e5239a8ca03b269a3283ad5ff74064be94cdb9e"
+    },
+    {
+      "path": "tests/test_orchestrator.py",
+      "bytes": 13003,
+      "sha256": "73b3bc38cd73545ebf2a7565055205cf0ec2db12aaabd592ac3ec4a282397617"
+    },
+    {
+      "path": "tests/test_recommended_action.py",
+      "bytes": 5567,
+      "sha256": "e298facb51d230ce3b5cac3021a4adbbd5fec7a7d720467c20a13a84b6b9d182"
+    },
+    {
+      "path": "tests/test_treasury.py",
+      "bytes": 9003,
+      "sha256": "218b2857d4c90ab73308bbf181ef251164c5b9b764638ae9f219a3c3474e6ef6"
+    },
+    {
+      "path": "tools/build_transfer.py",
+      "bytes": 13392,
+      "sha256": "3e416cc37f4c823278f1e89106bbee103203d7a7af655d38e63cd1753c649658"
+    },
+    {
+      "path": "TRANSFER_README.md",
+      "bytes": 3484,
+      "sha256": "33cb3359c9c1cb0132be77beb4383e35be2589cc95daecd95e6b4b39393f3af2"
+    }
+  ],
+  "checks": {
+    "source_files_unchanged": true,
+    "audit_integrity": "ok",
+    "workbooks_valid": true,
+    "git_objects_scanned": 69,
+    "secret_scan": "Known local provider tokens, base64 forms and common OpenAI/GitHub/private-key/credential-URL patterns checked; Git objects and nested workbooks scanned.",
+    "api": "Local API not reachable; no server was started by packaging.",
+    "paid_model_requests": 0
+  },
+  "exclusions": [
+    "API keys and .env files",
+    "provider logins and OpenCode/OpenChamber profile",
+    "machine venv/node_modules/build outputs",
+    "bytecode/log/lock files",
+    "calculation cache",
+    "Git hooks and original machine Git config",
+    "database sidecars and old Kafka events"
+  ],
+  "security_note": "Not encrypted. Contains banking reference documents and application conversation/audit data. Use employer-approved secure transport. Handover is not a full development-session export."
+}

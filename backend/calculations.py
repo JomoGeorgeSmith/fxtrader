@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 from .liquidity_metrics import calculate_metrics
+from .fx_market import ledger_events
 
 CURRENCIES = ('JMD','USD','GBP','CAD')
 def dec(value):
@@ -13,6 +14,7 @@ def evaluate(data, rules, now=None):
     now = now or datetime.now()
     findings, positions, forecast = [], [], []
     rates = {r['currency']: r for r in data['rates']}
+    booked_events=ledger_events(data)
     def add(id, severity, title, summary, detail, rule, sources, currency=None):
         findings.append(dict(id=id,severity=severity,title=title,summary=summary,detail=detail,rule=rule,sources=sources,currency=currency))
     for currency in CURRENCIES:
@@ -32,8 +34,9 @@ def evaluate(data, rules, now=None):
             def flows(kind):
                 return [r for r in data[kind] if r['currency']==currency and r['value_date']==date and r['status'] not in ('Cancelled','Settled')]
             ins, outs = flows('receipts'), flows('payments')
-            running += sum((dec(r['amount']) for r in ins),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))
-            cautious_running += sum((dec(r['amount']) for r in ins if r['status'] in ('Confirmed','Committed')),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))
+            booked=sum((amount for when,c,amount in booked_events if when==date and c==currency),Decimal(0))
+            running += sum((dec(r['amount']) for r in ins),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))+booked
+            cautious_running += sum((dec(r['amount']) for r in ins if r['status'] in ('Confirmed','Committed')),Decimal(0))-sum((dec(r['amount']) for r in outs),Decimal(0))+booked
             cautious_low = min(cautious_low,cautious_running)
             forecast.append(dict(currency=currency,date=date,balance=float(running),confirmed_receipts_balance=float(cautious_running)))
             if running < floor and first_breach is None:
@@ -58,6 +61,16 @@ def evaluate(data, rules, now=None):
         add('fx-exposure','warning','FX exposure is above the demo limit',f'Aggregate absolute exposure is {pct:.1f}% of capital; the demo limit is {rules["max_absolute_fx_exposure_pct"]}%.',
             f'Sum of absolute currency exposures translated at sheet selling rates: {money(exposure,"JMD")}. Capital: {money(capital,"JMD")}. This simplified gross measure is not regulatory NOP. Review exposure-reduction options with Treasury.',
             'max_absolute_fx_exposure_pct',[r['_source'] for r in data['risk']+data['rates']])
+    for limit in data.get('fx_limits',[]):
+        currency=limit['currency']
+        risk=next((r for r in data['risk'] if r['currency']==currency),None)
+        if risk is None:continue
+        excess=abs(dec(risk['net_fx_exposure']))-dec(limit['max_absolute_exposure'])
+        if excess>0:
+            add(f'fx-exposure-{currency}','warning',f'{currency} position exceeds its synthetic limit',
+                f'The recorded net {currency} position is {money(dec(risk["net_fx_exposure"]),currency)} (absolute size {money(abs(dec(risk["net_fx_exposure"])),currency)}), {money(excess,currency)} above the synthetic limit of {money(dec(limit["max_absolute_exposure"]),currency)}.',
+                'The position comes from Risk_Inputs, not the operating account balance. Reconcile assets and offsets, then assess any reduction against cash cushions, other currency needs, timing and the aggregate demo limit. No trade is selected by this finding.',
+                'fx_limits',[risk['_source'],limit['_source']],currency)
     for currency, rate in rates.items():
         age = (now-datetime.fromisoformat(str(rate['as_of']))).total_seconds()/3600
         change = (dec(rate['sell'])/dec(rate['previous_sell'])-1)*100
